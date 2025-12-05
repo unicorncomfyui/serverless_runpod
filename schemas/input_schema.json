@@ -1,0 +1,105 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": ["workflow_type"],
+  "properties": {
+    "workflow_type": {
+      "type": "string",
+      "enum": ["txt2img", "img2img", "custom"],
+      "description": "Type of workflow to execute"
+    },
+    "prompt": {
+      "type": "string",
+      "description": "Positive prompt for image generation",
+      "maxLength": 2000
+    },
+    "negative_prompt": {
+      "type": "string",
+      "description": "Negative prompt for image generation",
+      "maxLength": 2000
+    },
+    "seed": {
+      "type": "integer",
+      "description": "Random seed for reproducibility",
+      "minimum": 0,
+      "maximum": 4294967295
+    },
+    "steps": {
+      "type": "integer",
+      "description": "Number of sampling steps",
+      "minimum": 1,
+      "maximum": 150,
+      "default": 20
+    },
+    "cfg_scale": {
+      "type": "number",
+      "description": "Classifier-free guidance scale",
+      "minimum": 1.0,
+      "maximum": 30.0,
+      "default": 7.0
+    },
+    "width": {
+      "type": "integer",
+      "description": "Output image width",
+      "enum": [512, 768, 1024],
+      "default": 512
+    },
+    "height": {
+      "type": "integer",
+      "description": "Output image height",
+      "enum": [512, 768, 1024],
+      "default": 512
+    },
+    "sampler_name": {
+      "type": "string",
+      "description": "Sampling method",
+      "enum": ["euler", "euler_a", "heun", "dpm_2", "dpm_2_a", "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_a", "dpmpp_2m", "ddim", "uni_pc"],
+      "default": "euler"
+    },
+    "scheduler": {
+      "type": "string",
+      "description": "Scheduler type",
+      "enum": ["normal", "karras", "exponential", "sgm_uniform"],
+      "default": "normal"
+    },
+    "denoise": {
+      "type": "number",
+      "description": "Denoising strength (for img2img)",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "default": 0.75
+    },
+    "model": {
+      "type": "string",
+      "description": "Model checkpoint filename",
+      "default": "qwen_model.safetensors"
+    },
+    "input_image": {
+      "type": "string",
+      "description": "Base64 encoded input image (for img2img)",
+      "contentEncoding": "base64"
+    },
+    "custom_workflow": {
+      "type": "object",
+      "description": "Custom ComfyUI workflow JSON (for custom workflow_type)"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "workflow_type": { "const": "img2img" } }
+      },
+      "then": {
+        "required": ["input_image"]
+      }
+    },
+    {
+      "if": {
+        "properties": { "workflow_type": { "const": "custom" } }
+      },
+      "then": {
+        "required": ["custom_workflow"]
+      }
+    }
+  ]
+}
