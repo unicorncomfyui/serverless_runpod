@@ -2,6 +2,8 @@
 
 Worker serverless pour RunPod permettant l'exécution de workflows ComfyUI avec support multi-worker.
 
+[![Docker Build](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml/badge.svg)](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml)
+
 ## Table des Matières
 
 - [Vue d'ensemble](#vue-densemble)
