@@ -60,10 +60,19 @@ else
     exit 1
 fi
 
+# Check if GPU is available
+if nvidia-smi &> /dev/null; then
+    echo "✓ GPU detected"
+    GPU_ARGS=""
+else
+    echo "⚠ WARNING: No GPU detected, starting in CPU mode (VERY SLOW)"
+    GPU_ARGS="--cpu"
+fi
+
 # Start ComfyUI in the background
 echo "Starting ComfyUI server..."
 cd "$COMFYUI_DIR"
-python main.py --listen 0.0.0.0 --port 3000 --temp-directory /tmp > /workspace/logs/comfyui-serverless.log 2>&1 &
+python main.py --listen 0.0.0.0 --port 3000 --temp-directory /tmp $GPU_ARGS > /workspace/logs/comfyui-serverless.log 2>&1 &
 COMFYUI_PID=$!
 
 echo "ComfyUI started with PID: $COMFYUI_PID"
