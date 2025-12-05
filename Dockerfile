@@ -49,10 +49,44 @@ RUN pip install --no-cache-dir \
     tiktoken>=0.5.2 \
     optimum>=1.16.0
 
-# Install custom nodes for Qwen if available
+# Install opencv-python
+RUN pip install --no-cache-dir opencv-python
+
+# Install ComfyUI custom nodes
 RUN cd /app/comfyui/custom_nodes && \
-    echo "Custom nodes will be installed here" && \
-    mkdir -p qwen-nodes
+    git clone --recursive https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
+    git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
+    git clone https://github.com/rgthree/rgthree-comfy.git && \
+    git clone https://github.com/JPS-GER/ComfyUI_JPS-Nodes.git && \
+    git clone https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git && \
+    git clone https://github.com/Jordach/comfy-plasma.git && \
+    git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack.git && \
+    git clone https://github.com/ClownsharkBatwing/RES4LYF.git && \
+    git clone https://github.com/yolain/ComfyUI-Easy-Use.git && \
+    git clone https://github.com/WASasquatch/was-node-suite-comfyui.git && \
+    git clone https://github.com/theUpsider/ComfyUI-Logic.git && \
+    git clone https://github.com/cubiq/ComfyUI_essentials.git && \
+    git clone https://github.com/chrisgoringe/cg-image-picker.git && \
+    git clone https://github.com/chflame163/ComfyUI_LayerStyle.git && \
+    git clone https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git && \
+    git clone https://github.com/Jonseed/ComfyUI-Detail-Daemon.git && \
+    git clone https://github.com/shadowcz007/comfyui-mixlab-nodes.git && \
+    git clone https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git && \
+    git clone https://github.com/bash-j/mikey_nodes.git && \
+    git clone https://github.com/chrisgoringe/cg-use-everywhere.git && \
+    git clone https://github.com/M1kep/ComfyLiterals.git
+
+# Install requirements for custom nodes
+RUN for dir in /app/comfyui/custom_nodes/*/; do \
+        if [ -f "$dir/requirements.txt" ]; then \
+            echo "Installing requirements for $(basename $dir)"; \
+            pip install --no-cache-dir -r "$dir/requirements.txt"; \
+        fi; \
+        if [ -f "$dir/install.py" ]; then \
+            echo "Running install.py for $(basename $dir)"; \
+            cd "$dir" && python install.py; \
+        fi; \
+    done
 
 # Copy application files
 COPY requirements.txt /app/
