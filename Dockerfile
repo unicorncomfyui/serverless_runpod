@@ -32,6 +32,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libgomp1 \
     build-essential \
     ca-certificates \
+    libssl-dev \
+    libffi-dev \
+    pkg-config \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -56,14 +59,18 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/comfyui && \
     pip install -r requirements.txt \
     && rm -rf /tmp/* /var/tmp/*
 
-# Install Qwen-specific dependencies and additional packages for custom nodes
+# Install Qwen-specific dependencies
 RUN pip install \
     transformers>=4.37.0 \
     accelerate>=0.25.0 \
     sentencepiece>=0.1.99 \
     tiktoken>=0.5.2 \
     optimum>=1.16.0 \
-    pyOpenSSL>=23.0.0 \
+    && rm -rf /tmp/* /var/tmp/*
+
+# Install pyOpenSSL and its dependencies (needed for custom nodes like rgthree-comfy)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install cryptography>=41.0.0 pyOpenSSL>=23.0.0 \
     && rm -rf /tmp/* /var/tmp/*
 
 # Install opencv-python
