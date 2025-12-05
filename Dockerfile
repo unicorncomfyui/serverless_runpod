@@ -15,7 +15,7 @@ RUN apt-get update && apt-get install -y \
     python3.11 \
     python3.11-venv \
     python3.11-dev \
-    python3-pip \
+    python3.11-distutils \
     git \
     wget \
     curl \
@@ -31,6 +31,9 @@ RUN apt-get update && apt-get install -y \
 
 # Create symbolic link for python
 RUN ln -s /usr/bin/python3.11 /usr/bin/python
+
+# Install pip for Python 3.11
+RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 # Upgrade pip and install build tools
 RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
