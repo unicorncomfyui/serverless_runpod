@@ -31,7 +31,7 @@ fi
 # Function to check if ComfyUI is ready
 wait_for_comfyui() {
     echo "Waiting for ComfyUI to be ready..."
-    local max_attempts=30
+    local max_attempts=90  # Increased from 30 to 90 (3 minutes total)
     local attempt=0
 
     while [ $attempt -lt $max_attempts ]; do
@@ -40,11 +40,20 @@ wait_for_comfyui() {
             return 0
         fi
         attempt=$((attempt + 1))
-        echo "Attempt $attempt/$max_attempts - ComfyUI not ready yet..."
+
+        # Show progress every 10 attempts and tail logs
+        if [ $((attempt % 10)) -eq 0 ]; then
+            echo "Attempt $attempt/$max_attempts - ComfyUI not ready yet..."
+            echo "Last 5 lines from ComfyUI logs:"
+            tail -n 5 /workspace/logs/comfyui-serverless.log 2>/dev/null || echo "No logs yet"
+        fi
+
         sleep 2
     done
 
     echo "ERROR: ComfyUI failed to start within timeout"
+    echo "Full ComfyUI logs:"
+    cat /workspace/logs/comfyui-serverless.log 2>/dev/null || echo "No logs found"
     return 1
 }
 
@@ -71,11 +80,24 @@ fi
 
 # Start ComfyUI in the background
 echo "Starting ComfyUI server..."
+echo "ComfyUI directory: $COMFYUI_DIR"
+echo "GPU args: $GPU_ARGS"
+
+# Check if main.py exists
+if [ ! -f "$COMFYUI_DIR/main.py" ]; then
+    echo "ERROR: ComfyUI main.py not found at $COMFYUI_DIR/main.py"
+    exit 1
+fi
+
 cd "$COMFYUI_DIR"
 python main.py --listen 0.0.0.0 --port 3000 --temp-directory /tmp $GPU_ARGS > /workspace/logs/comfyui-serverless.log 2>&1 &
 COMFYUI_PID=$!
 
 echo "ComfyUI started with PID: $COMFYUI_PID"
+echo "Logs will be written to: /workspace/logs/comfyui-serverless.log"
+sleep 3  # Give it a moment to start writing logs
+echo "Initial ComfyUI output:"
+head -n 20 /workspace/logs/comfyui-serverless.log 2>/dev/null || echo "No logs yet"
 
 # Wait for ComfyUI to be ready
 if ! wait_for_comfyui; then

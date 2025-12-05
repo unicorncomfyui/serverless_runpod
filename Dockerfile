@@ -56,13 +56,14 @@ RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/comfyui && \
     pip install -r requirements.txt \
     && rm -rf /tmp/* /var/tmp/*
 
-# Install Qwen-specific dependencies
+# Install Qwen-specific dependencies and additional packages for custom nodes
 RUN pip install \
     transformers>=4.37.0 \
     accelerate>=0.25.0 \
     sentencepiece>=0.1.99 \
     tiktoken>=0.5.2 \
     optimum>=1.16.0 \
+    pyOpenSSL>=23.0.0 \
     && rm -rf /tmp/* /var/tmp/*
 
 # Install opencv-python
