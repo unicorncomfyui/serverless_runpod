@@ -129,7 +129,7 @@ RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Logic \
             pip install -r "$dir/requirements.txt" || true; \
         fi; \
     done \
-    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/*
+    && rm -rf /tmp/* /var/tmp/*
 
 RUN for dir in /app/comfyui/custom_nodes/rgthree-comfy \
                /app/comfyui/custom_nodes/ComfyUI-KJNodes \
@@ -140,7 +140,7 @@ RUN for dir in /app/comfyui/custom_nodes/rgthree-comfy \
             pip install -r "$dir/requirements.txt" || true; \
         fi; \
     done \
-    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/*
+    && rm -rf /tmp/* /var/tmp/*
 
 RUN for dir in /app/comfyui/custom_nodes/ComfyUI_UltimateSDUpscale \
                /app/comfyui/custom_nodes/ComfyUI_Comfyroll_CustomNodes \
@@ -153,7 +153,7 @@ RUN for dir in /app/comfyui/custom_nodes/ComfyUI_UltimateSDUpscale \
             pip install -r "$dir/requirements.txt" || true; \
         fi; \
     done \
-    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/*
+    && rm -rf /tmp/* /var/tmp/*
 
 # Impact Pack nodes (may download models - cleanup aggressively)
 RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Impact-Pack \
@@ -165,13 +165,14 @@ RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Impact-Pack \
             cd "$dir" && python install.py || true; \
         fi; \
     done \
-    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/* \
+    && rm -rf /tmp/* /var/tmp/* \
     && find /app/comfyui/custom_nodes -name "*.pth" -size +100M -delete \
     && find /app/comfyui/custom_nodes -name "*.safetensors" -size +100M -delete
 
-# Copy application files
+# Copy application files and install handler dependencies
+# Install AFTER custom nodes to ensure dependencies are not removed
 COPY requirements.txt /app/
-RUN pip install -r requirements.txt \
+RUN pip install --no-cache-dir -r requirements.txt \
     && rm -rf /tmp/* /var/tmp/*
 
 COPY handler.py /app/
