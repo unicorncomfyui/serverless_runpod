@@ -69,8 +69,9 @@ RUN pip install \
     && rm -rf /tmp/* /var/tmp/*
 
 # Install pyOpenSSL and its dependencies (needed for custom nodes like rgthree-comfy)
+# Use --ignore-installed to override system cryptography package
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install cryptography>=41.0.0 pyOpenSSL>=23.0.0 \
+    pip install --ignore-installed cryptography>=41.0.0 pyOpenSSL>=23.0.0 \
     && rm -rf /tmp/* /var/tmp/*
 
 # Install opencv-python
