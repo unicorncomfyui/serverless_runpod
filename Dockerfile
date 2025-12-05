@@ -7,7 +7,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 # Python and pip configuration
 ENV PYTHONUNBUFFERED=1 \
     PIP_PREFER_BINARY=1 \
-    PIP_NO_CACHE_DIR=1 \
     CMAKE_BUILD_PARALLEL_LEVEL=8
 
 # Set working directory
@@ -44,9 +43,10 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 # Upgrade pip and install build tools
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA 12.8 support (nightly builds)
-RUN pip install --pre torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/nightly/cu128
+# Install PyTorch with CUDA 12.x support (stable builds)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/cu124
 
 # Install ComfyUI and its dependencies
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/comfyui && \
