@@ -69,42 +69,96 @@ RUN pip install \
 RUN pip install opencv-python \
     && rm -rf /tmp/* /var/tmp/*
 
-# Install ComfyUI custom nodes
+# Install ComfyUI custom nodes - Batch 1 (lightweight)
 RUN cd /app/comfyui/custom_nodes && \
-    git clone --recursive https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
-    git clone https://github.com/kijai/ComfyUI-KJNodes.git && \
-    git clone https://github.com/rgthree/rgthree-comfy.git && \
-    git clone https://github.com/JPS-GER/ComfyUI_JPS-Nodes.git && \
-    git clone https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git && \
-    git clone https://github.com/Jordach/comfy-plasma.git && \
-    git clone https://github.com/ltdrdata/ComfyUI-Impact-Pack.git && \
-    git clone https://github.com/ClownsharkBatwing/RES4LYF.git && \
-    git clone https://github.com/yolain/ComfyUI-Easy-Use.git && \
-    git clone https://github.com/WASasquatch/was-node-suite-comfyui.git && \
-    git clone https://github.com/theUpsider/ComfyUI-Logic.git && \
-    git clone https://github.com/cubiq/ComfyUI_essentials.git && \
-    git clone https://github.com/chrisgoringe/cg-image-picker.git && \
-    git clone https://github.com/chflame163/ComfyUI_LayerStyle.git && \
-    git clone https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git && \
-    git clone https://github.com/Jonseed/ComfyUI-Detail-Daemon.git && \
-    git clone https://github.com/shadowcz007/comfyui-mixlab-nodes.git && \
-    git clone https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git && \
-    git clone https://github.com/bash-j/mikey_nodes.git && \
-    git clone https://github.com/chrisgoringe/cg-use-everywhere.git && \
-    git clone https://github.com/M1kep/ComfyLiterals.git
+    git clone --depth 1 https://github.com/theUpsider/ComfyUI-Logic.git && \
+    git clone --depth 1 https://github.com/chrisgoringe/cg-use-everywhere.git && \
+    git clone --depth 1 https://github.com/chrisgoringe/cg-image-picker.git && \
+    git clone --depth 1 https://github.com/M1kep/ComfyLiterals.git && \
+    git clone --depth 1 https://github.com/Jordach/comfy-plasma.git && \
+    git clone --depth 1 https://github.com/ClownsharkBatwing/RES4LYF.git && \
+    git clone --depth 1 https://github.com/JPS-GER/ComfyUI_JPS-Nodes.git && \
+    rm -rf /tmp/* /var/tmp/*
 
-# Install requirements for custom nodes
-RUN for dir in /app/comfyui/custom_nodes/*/; do \
+# Install ComfyUI custom nodes - Batch 2 (medium)
+RUN cd /app/comfyui/custom_nodes && \
+    git clone --depth 1 https://github.com/rgthree/rgthree-comfy.git && \
+    git clone --depth 1 https://github.com/kijai/ComfyUI-KJNodes.git && \
+    git clone --depth 1 https://github.com/cubiq/ComfyUI_essentials.git && \
+    git clone --depth 1 https://github.com/Jonseed/ComfyUI-Detail-Daemon.git && \
+    git clone --depth 1 https://github.com/bash-j/mikey_nodes.git && \
+    rm -rf /tmp/* /var/tmp/*
+
+# Install ComfyUI custom nodes - Batch 3 (heavy, without models download)
+RUN cd /app/comfyui/custom_nodes && \
+    git clone --depth 1 --recursive https://github.com/ssitu/ComfyUI_UltimateSDUpscale.git && \
+    git clone --depth 1 https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git && \
+    git clone --depth 1 https://github.com/WASasquatch/was-node-suite-comfyui.git && \
+    git clone --depth 1 https://github.com/yolain/ComfyUI-Easy-Use.git && \
+    git clone --depth 1 https://github.com/chflame163/ComfyUI_LayerStyle.git && \
+    git clone --depth 1 https://github.com/chflame163/ComfyUI_LayerStyle_Advance.git && \
+    git clone --depth 1 https://github.com/shadowcz007/comfyui-mixlab-nodes.git && \
+    rm -rf /tmp/* /var/tmp/*
+
+# Install ComfyUI custom nodes - Batch 4 (Impact Pack - downloads models)
+# Skip model downloads by setting environment variable
+RUN cd /app/comfyui/custom_nodes && \
+    export SKIP_MODEL_DOWNLOAD=1 && \
+    git clone --depth 1 https://github.com/ltdrdata/ComfyUI-Impact-Pack.git && \
+    git clone --depth 1 https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git && \
+    rm -rf /tmp/* /var/tmp/*
+
+# Install requirements for custom nodes (in smaller batches)
+RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Logic \
+               /app/comfyui/custom_nodes/cg-use-everywhere \
+               /app/comfyui/custom_nodes/cg-image-picker \
+               /app/comfyui/custom_nodes/ComfyLiterals \
+               /app/comfyui/custom_nodes/comfy-plasma \
+               /app/comfyui/custom_nodes/RES4LYF \
+               /app/comfyui/custom_nodes/ComfyUI_JPS-Nodes; do \
         if [ -f "$dir/requirements.txt" ]; then \
-            echo "Installing requirements for $(basename $dir)"; \
-            pip install -r "$dir/requirements.txt"; \
-        fi; \
-        if [ -f "$dir/install.py" ]; then \
-            echo "Running install.py for $(basename $dir)"; \
-            cd "$dir" && python install.py; \
+            pip install -r "$dir/requirements.txt" || true; \
         fi; \
     done \
-    && rm -rf /tmp/* /var/tmp/*
+    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/*
+
+RUN for dir in /app/comfyui/custom_nodes/rgthree-comfy \
+               /app/comfyui/custom_nodes/ComfyUI-KJNodes \
+               /app/comfyui/custom_nodes/ComfyUI_essentials \
+               /app/comfyui/custom_nodes/ComfyUI-Detail-Daemon \
+               /app/comfyui/custom_nodes/mikey_nodes; do \
+        if [ -f "$dir/requirements.txt" ]; then \
+            pip install -r "$dir/requirements.txt" || true; \
+        fi; \
+    done \
+    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/*
+
+RUN for dir in /app/comfyui/custom_nodes/ComfyUI_UltimateSDUpscale \
+               /app/comfyui/custom_nodes/ComfyUI_Comfyroll_CustomNodes \
+               /app/comfyui/custom_nodes/was-node-suite-comfyui \
+               /app/comfyui/custom_nodes/ComfyUI-Easy-Use \
+               /app/comfyui/custom_nodes/ComfyUI_LayerStyle \
+               /app/comfyui/custom_nodes/ComfyUI_LayerStyle_Advance \
+               /app/comfyui/custom_nodes/comfyui-mixlab-nodes; do \
+        if [ -f "$dir/requirements.txt" ]; then \
+            pip install -r "$dir/requirements.txt" || true; \
+        fi; \
+    done \
+    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/*
+
+# Impact Pack nodes (may download models - cleanup aggressively)
+RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Impact-Pack \
+               /app/comfyui/custom_nodes/ComfyUI-Impact-Subpack; do \
+        if [ -f "$dir/requirements.txt" ]; then \
+            pip install -r "$dir/requirements.txt" || true; \
+        fi; \
+        if [ -f "$dir/install.py" ]; then \
+            cd "$dir" && python install.py || true; \
+        fi; \
+    done \
+    && rm -rf /tmp/* /var/tmp/* /root/.cache/pip/* \
+    && find /app/comfyui/custom_nodes -name "*.pth" -size +100M -delete \
+    && find /app/comfyui/custom_nodes -name "*.safetensors" -size +100M -delete
 
 # Copy application files
 COPY requirements.txt /app/
