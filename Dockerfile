@@ -4,6 +4,12 @@ FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04 AS base
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Python and pip configuration
+ENV PYTHONUNBUFFERED=1 \
+    PIP_PREFER_BINARY=1 \
+    PIP_NO_CACHE_DIR=1 \
+    CMAKE_BUILD_PARALLEL_LEVEL=8
+
 # Set working directory
 WORKDIR /app
 
@@ -36,18 +42,18 @@ RUN ln -s /usr/bin/python3.11 /usr/bin/python
 RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 
 # Upgrade pip and install build tools
-RUN python -m pip install --no-cache-dir --upgrade pip setuptools wheel
+RUN python -m pip install --upgrade pip setuptools wheel
 
 # Install PyTorch (default CUDA version, compatible with CUDA 12.x)
-RUN pip install --no-cache-dir torch torchvision torchaudio
+RUN pip install torch torchvision torchaudio
 
 # Install ComfyUI and its dependencies
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/comfyui && \
     cd /app/comfyui && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install -r requirements.txt
 
 # Install Qwen-specific dependencies
-RUN pip install --no-cache-dir \
+RUN pip install \
     transformers>=4.37.0 \
     accelerate>=0.25.0 \
     sentencepiece>=0.1.99 \
@@ -55,7 +61,7 @@ RUN pip install --no-cache-dir \
     optimum>=1.16.0
 
 # Install opencv-python
-RUN pip install --no-cache-dir opencv-python
+RUN pip install opencv-python
 
 # Install ComfyUI custom nodes
 RUN cd /app/comfyui/custom_nodes && \
@@ -85,7 +91,7 @@ RUN cd /app/comfyui/custom_nodes && \
 RUN for dir in /app/comfyui/custom_nodes/*/; do \
         if [ -f "$dir/requirements.txt" ]; then \
             echo "Installing requirements for $(basename $dir)"; \
-            pip install --no-cache-dir -r "$dir/requirements.txt"; \
+            pip install -r "$dir/requirements.txt"; \
         fi; \
         if [ -f "$dir/install.py" ]; then \
             echo "Running install.py for $(basename $dir)"; \
@@ -95,7 +101,7 @@ RUN for dir in /app/comfyui/custom_nodes/*/; do \
 
 # Copy application files
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install -r requirements.txt
 
 COPY handler.py /app/
 COPY start.sh /app/
