@@ -44,10 +44,10 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 # Upgrade pip and install build tools
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install PyTorch with CUDA 12.x support (stable builds)
+# Install PyTorch nightly with RTX 5090 support (sm_120, CUDA 12.8)
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu124 \
+    pip install --pre torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/nightly/cu128 \
     && rm -rf /tmp/* /var/tmp/*
 
 # Install ComfyUI and its dependencies
@@ -195,9 +195,9 @@ ENV CUDA_HOME=/usr/local/cuda
 ENV PATH="${CUDA_HOME}/bin:${PATH}"
 ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD curl -f http://localhost:3000/ || exit 1
+# Health check - Disabled temporarily for debugging
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+#     CMD curl -f http://localhost:3000/ || exit 1
 
 # Start the handler
 CMD ["/app/start.sh"]
