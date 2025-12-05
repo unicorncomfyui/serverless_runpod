@@ -44,8 +44,9 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 # Upgrade pip and install build tools
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install PyTorch (default CUDA version, compatible with CUDA 12.x)
-RUN pip install torch torchvision torchaudio
+# Install PyTorch with CUDA 12.8 support (nightly builds)
+RUN pip install --pre torch torchvision torchaudio \
+    --index-url https://download.pytorch.org/whl/nightly/cu128
 
 # Install ComfyUI and its dependencies
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/comfyui && \
