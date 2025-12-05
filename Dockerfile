@@ -13,10 +13,10 @@ ENV PYTHONUNBUFFERED=1 \
 WORKDIR /app
 
 # Install system dependencies and add deadsnakes PPA for Python 3.11
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     software-properties-common \
     && add-apt-repository ppa:deadsnakes/ppa \
-    && apt-get update && apt-get install -y \
+    && apt-get update && apt-get install -y --no-install-recommends \
     python3.11 \
     python3.11-venv \
     python3.11-dev \
@@ -32,7 +32,8 @@ RUN apt-get update && apt-get install -y \
     libgomp1 \
     build-essential \
     ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Create symbolic link for python
 RUN ln -s /usr/bin/python3.11 /usr/bin/python
@@ -46,12 +47,14 @@ RUN python -m pip install --upgrade pip setuptools wheel
 # Install PyTorch with CUDA 12.x support (stable builds)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu124
+    --index-url https://download.pytorch.org/whl/cu124 \
+    && rm -rf /tmp/* /var/tmp/*
 
 # Install ComfyUI and its dependencies
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/comfyui && \
     cd /app/comfyui && \
-    pip install -r requirements.txt
+    pip install -r requirements.txt \
+    && rm -rf /tmp/* /var/tmp/*
 
 # Install Qwen-specific dependencies
 RUN pip install \
@@ -59,10 +62,12 @@ RUN pip install \
     accelerate>=0.25.0 \
     sentencepiece>=0.1.99 \
     tiktoken>=0.5.2 \
-    optimum>=1.16.0
+    optimum>=1.16.0 \
+    && rm -rf /tmp/* /var/tmp/*
 
 # Install opencv-python
-RUN pip install opencv-python
+RUN pip install opencv-python \
+    && rm -rf /tmp/* /var/tmp/*
 
 # Install ComfyUI custom nodes
 RUN cd /app/comfyui/custom_nodes && \
@@ -98,11 +103,13 @@ RUN for dir in /app/comfyui/custom_nodes/*/; do \
             echo "Running install.py for $(basename $dir)"; \
             cd "$dir" && python install.py; \
         fi; \
-    done
+    done \
+    && rm -rf /tmp/* /var/tmp/*
 
 # Copy application files
 COPY requirements.txt /app/
-RUN pip install -r requirements.txt
+RUN pip install -r requirements.txt \
+    && rm -rf /tmp/* /var/tmp/*
 
 COPY handler.py /app/
 COPY start.sh /app/
