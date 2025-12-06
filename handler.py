@@ -92,15 +92,26 @@ def check_resources() -> Dict[str, bool]:
 
 
 def validate_input(job_input: Dict[str, Any]) -> Dict[str, Any]:
-    """Validate and sanitize input"""
-    required_fields = ['workflow_type']
+    """Validate and sanitize input
 
-    for field in required_fields:
-        if field not in job_input:
-            raise ValueError(f"Missing required field: {field}")
+    Supports two input modes:
+    1. Pre-defined workflow: {"workflow_type": "txt2img", "prompt": "...", ...}
+    2. Custom workflow: {"workflow": {...ComfyUI workflow JSON...}}
+    """
+    # Check if custom workflow is provided
+    if 'workflow' in job_input:
+        # Custom workflow mode - workflow JSON provided directly
+        if not isinstance(job_input['workflow'], dict):
+            raise ValueError("'workflow' must be a valid ComfyUI workflow JSON object")
+        logger.info("Using custom workflow from input")
+        return job_input
+
+    # Pre-defined workflow mode - requires workflow_type
+    if 'workflow_type' not in job_input:
+        raise ValueError("Missing required field: 'workflow_type' or 'workflow'")
 
     workflow_type = job_input['workflow_type']
-    valid_types = ['txt2img', 'img2img', 'custom']
+    valid_types = ['txt2img', 'img2img']
 
     if workflow_type not in valid_types:
         raise ValueError(f"Invalid workflow_type. Must be one of: {valid_types}")
@@ -261,12 +272,17 @@ def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         # Validate input
         job_input = validate_input(event.get('input', {}))
 
-        # Load workflow
-        workflow_type = job_input['workflow_type']
-        workflow = load_workflow(workflow_type)
-
-        # Inject user parameters
-        workflow = inject_parameters(workflow, job_input)
+        # Get workflow (either from file or from input)
+        if 'workflow' in job_input:
+            # Custom workflow provided directly
+            workflow = job_input['workflow']
+            logger.info("Using custom workflow from input")
+        else:
+            # Load pre-defined workflow from file
+            workflow_type = job_input['workflow_type']
+            workflow = load_workflow(workflow_type)
+            # Inject user parameters
+            workflow = inject_parameters(workflow, job_input)
 
         # Queue prompt
         prompt_id = queue_prompt(workflow)
