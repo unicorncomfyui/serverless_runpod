@@ -579,10 +579,33 @@ This means if you use this code to provide a network service, you must make your
 - [ ] Web management interface
 - [ ] Simultaneous multi-model support
 
+## Security
+
+Security is a top priority. Please review our [Security Policy](SECURITY.md) for:
+
+- Reporting vulnerabilities
+- Security best practices
+- Dependency CVE status
+- Automated security scanning
+
+### Quick Security Checklist
+
+Before deploying to production:
+
+- [ ] All secrets in environment variables (never in code)
+- [ ] Dependencies updated to latest patch versions
+- [ ] Docker image scanned for vulnerabilities
+- [ ] Resource limits configured (timeout, memory)
+- [ ] Only trusted models and workflows
+- [ ] Network Volume permissions verified
+
+See [SECURITY.md](SECURITY.md) for detailed security guidelines.
+
 ## Support and Documentation
 
 ### Useful Links
 
+- **Security Policy**: [SECURITY.md](SECURITY.md)
 - **RunPod Documentation**: https://docs.runpod.io/
 - **ComfyUI Documentation**: https://github.com/comfyanonymous/ComfyUI
 - **GitHub Issues**: https://github.com/unicorncomfyui/serverless_runpod/issues

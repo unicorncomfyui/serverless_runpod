@@ -850,10 +850,33 @@ Cela signifie que si vous utilisez ce code pour fournir un service réseau, vous
 - [ ] Interface web de gestion
 - [ ] Support multi-modèles simultanés
 
+## Sécurité
+
+La sécurité est une priorité. Consultez notre [Politique de Sécurité](SECURITY.md) pour :
+
+- Signaler des vulnérabilités
+- Meilleures pratiques de sécurité
+- Statut des CVE des dépendances
+- Scanning de sécurité automatisé
+
+### Checklist de Sécurité Rapide
+
+Avant de déployer en production :
+
+- [ ] Tous les secrets dans les variables d'environnement (jamais dans le code)
+- [ ] Dépendances mises à jour vers les dernières versions patch
+- [ ] Image Docker scannée pour les vulnérabilités
+- [ ] Limites de ressources configurées (timeout, mémoire)
+- [ ] Seulement des modèles et workflows de confiance
+- [ ] Permissions du Network Volume vérifiées
+
+Voir [SECURITY.md](SECURITY.md) pour des directives de sécurité détaillées.
+
 ## Support et Documentation
 
 ### Liens utiles
 
+- **Politique de Sécurité** : [SECURITY.md](SECURITY.md)
 - **Documentation RunPod** : https://docs.runpod.io/
 - **Documentation ComfyUI** : https://github.com/comfyanonymous/ComfyUI
 - **Issues GitHub** : https://github.com/unicorncomfyui/serverless_runpod/issues

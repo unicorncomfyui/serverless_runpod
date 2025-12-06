@@ -1,12 +1,12 @@
 # RunPod SDK
-runpod>=1.5.0
+runpod>=1.5.0  # No known CVEs
 
 # HTTP and API
-requests>=2.31.0
-aiohttp>=3.9.0
+requests>=2.32.0  # CVE-2024-35195 patched (was 2.31.0)
+aiohttp>=3.9.2    # CVE-2024-23334 patched (was 3.9.0)
 
 # Image processing
-Pillow>=10.0.0
+Pillow>=10.2.0    # CVE-2023-50447 patched (was 10.0.0)
 
 # Utilities
 python-dotenv>=1.0.0
