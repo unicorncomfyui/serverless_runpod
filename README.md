@@ -1,5 +1,7 @@
 # RunPod Serverless ComfyUI avec Qwen
 
+**Français** | **[English](README.en.md)**
+
 Worker serverless pour RunPod permettant l'exécution de workflows ComfyUI avec support multi-worker et intégration de modèles Qwen.
 
 [![Docker Build](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml/badge.svg)](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml)
