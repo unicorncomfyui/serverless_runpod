@@ -1,104 +1,104 @@
-# RunPod Serverless ComfyUI avec Qwen
+# RunPod Serverless ComfyUI with Qwen
 
-**[English](README.en.md)** | **Français**
+**English** | **[Français](README.fr.md)**
 
-Worker serverless pour RunPod permettant l'exécution de workflows ComfyUI avec support multi-worker et intégration de modèles Qwen.
+Serverless worker for RunPod enabling ComfyUI workflow execution with multi-worker support and Qwen model integration.
 
 [![Docker Build](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml/badge.svg)](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml)
 
-## Table des Matières
+## Table of Contents
 
-- [Vue d'ensemble](#vue-densemble)
-- [Caractéristiques](#caractéristiques)
+- [Overview](#overview)
+- [Features](#features)
 - [Architecture](#architecture)
-- [Prérequis](#prérequis)
-- [Installation Rapide](#installation-rapide)
-- [Configuration Détaillée](#configuration-détaillée)
-- [Network Volume RunPod](#network-volume-runpod)
-- [Déploiement sur RunPod](#déploiement-sur-runpod)
-- [Utilisation de l'API](#utilisation-de-lapi)
-- [Workflows Disponibles](#workflows-disponibles)
-- [Custom Nodes Installés](#custom-nodes-installés)
-- [Développement Local](#développement-local)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Detailed Configuration](#detailed-configuration)
+- [RunPod Network Volume](#runpod-network-volume)
+- [RunPod Deployment](#runpod-deployment)
+- [API Usage](#api-usage)
+- [Available Workflows](#available-workflows)
+- [Installed Custom Nodes](#installed-custom-nodes)
+- [Local Development](#local-development)
 - [Troubleshooting](#troubleshooting)
-- [Performances et Optimisation](#performances-et-optimisation)
+- [Performance and Optimization](#performance-and-optimization)
 - [FAQ](#faq)
 
-## Vue d'ensemble
+## Overview
 
-Ce projet adapte le template [comfyui-qwen-template](https://github.com/Hearmeman24/comfyui-qwen-template) pour une utilisation serverless sur RunPod. Il permet de déployer ComfyUI avec des modèles Qwen dans un environnement auto-scalable avec gestion automatique des ressources.
+This project adapts the [comfyui-qwen-template](https://github.com/Hearmeman24/comfyui-qwen-template) for serverless use on RunPod. It enables deploying ComfyUI with Qwen models in an auto-scalable environment with automatic resource management.
 
-### Différences clés avec un Pod classique
+### Key differences from a classic Pod
 
-| Aspect | Pod Classique | Serverless (ce projet) |
-|--------|---------------|------------------------|
-| **Démarrage** | Toujours actif | À la demande |
-| **Coût** | Payé en continu | Payé à l'utilisation |
-| **Scalabilité** | Manuelle | Automatique (0-N workers) |
-| **Network Volume** | Monté sur `/workspace` | Monté sur `/runpod-volume` |
-| **API** | Accès direct ComfyUI | Handler RunPod avec endpoints |
+| Aspect | Classic Pod | Serverless (this project) |
+|--------|-------------|---------------------------|
+| **Startup** | Always active | On-demand |
+| **Cost** | Continuous billing | Pay-per-use |
+| **Scalability** | Manual | Automatic (0-N workers) |
+| **Network Volume** | Mounted on `/workspace` | Mounted on `/runpod-volume` |
+| **API** | Direct ComfyUI access | RunPod handler with endpoints |
 
-## Caractéristiques
+## Features
 
-### Fonctionnalités principales
+### Main Features
 
-- **Auto-scaling** : Workers qui se lancent/arrêtent automatiquement selon la charge
-- **Multi-worker** : Traitement parallèle de plusieurs requêtes simultanées
-- **Network Volume** : Support complet des volumes réseau RunPod avec symlink automatique
-- **21 Custom Nodes** : Ensemble complet de nodes ComfyUI pré-installés
-- **Gestion des ressources** : Vérification automatique mémoire/disque avant chaque job
-- **Nettoyage automatique** : Libération des modèles et nettoyage après traitement
-- **Workflows flexibles** : txt2img, img2img, et workflows personnalisés
+- **Auto-scaling**: Workers that start/stop automatically based on load
+- **Multi-worker**: Parallel processing of multiple simultaneous requests
+- **Network Volume**: Full support for RunPod network volumes with automatic symlink
+- **21 Custom Nodes**: Complete set of pre-installed ComfyUI nodes
+- **Resource management**: Automatic memory/disk verification before each job
+- **Automatic cleanup**: Model unloading and cleanup after processing
+- **Flexible workflows**: txt2img, img2img, and custom workflows
 
-### Stack technique
+### Technical Stack
 
-- **Base** : CUDA 12.8.1 + cuDNN + Ubuntu 24.04
-- **Python** : 3.11 (via deadsnakes PPA)
-- **PyTorch** : Version stable compatible CUDA 12.x
-- **ComfyUI** : Dernière version depuis GitHub
-- **RunPod SDK** : Pour l'intégration serverless
+- **Base**: CUDA 12.8.1 + cuDNN + Ubuntu 24.04
+- **Python**: 3.11 (via deadsnakes PPA)
+- **PyTorch**: Nightly builds with CUDA 12.8 support
+- **ComfyUI**: Latest version from GitHub
+- **RunPod SDK**: For serverless integration
 
 ## Architecture
 
-### Structure du projet
+### Project Structure
 
 ```
 serverless_runpod/
-├── 📄 handler.py                  # Handler RunPod serverless principal
-├── 🚀 start.sh                    # Script de démarrage avec gestion Network Volume
-├── 🐳 Dockerfile                  # Image Docker CUDA 12.8.1 + Python 3.11
-├── 🔧 docker-compose.yml          # Configuration pour tests locaux
-├── 📦 requirements.txt            # Dépendances Python (RunPod SDK, etc.)
-├── 🔐 .env.example                # Template de configuration
-├── 📋 docker-bake.hcl             # Configuration Docker buildx
+├── 📄 handler.py                  # Main RunPod serverless handler
+├── 🚀 start.sh                    # Startup script with Network Volume management
+├── 🐳 Dockerfile                  # Docker image CUDA 12.8.1 + Python 3.11
+├── 🔧 docker-compose.yml          # Configuration for local testing
+├── 📦 requirements.txt            # Python dependencies (RunPod SDK, etc.)
+├── 🔐 .env.example                # Configuration template
+├── 📋 docker-bake.hcl             # Docker buildx configuration
 ├── .github/workflows/
-│   └── docker-build.yml           # CI/CD automatique vers Docker Hub
-├── workflows/                     # Workflows ComfyUI JSON
-│   ├── txt2img.json               # Génération texte → image
-│   ├── img2img.json               # Transformation image → image
+│   └── docker-build.yml           # Automatic CI/CD to Docker Hub
+├── workflows/                     # ComfyUI JSON workflows
+│   ├── txt2img.json               # Text → image generation
+│   ├── img2img.json               # Image → image transformation
 │   └── .gitkeep
-├── schemas/                       # Schémas de validation d'input
-│   ├── input_schema.json          # JSON Schema pour validation
+├── schemas/                       # Input validation schemas
+│   ├── input_schema.json          # JSON Schema for validation
 │   └── .gitkeep
-├── models/                        # Modèles (non versionnés dans git)
-│   ├── checkpoints/               # Modèles principaux (.safetensors, .ckpt)
-│   ├── upscale_models/            # Modèles d'upscaling (.pth)
+├── models/                        # Models (not versioned in git)
+│   ├── checkpoints/               # Main models (.safetensors, .ckpt)
+│   ├── upscale_models/            # Upscaling models (.pth)
 │   ├── loras/                     # LoRA
 │   ├── vae/                       # VAE
 │   └── embeddings/                # Embeddings
-├── input/                         # Images d'entrée pour tests locaux
-├── output/                        # Images générées (tests locaux)
-└── tests/                         # Tests unitaires
+├── input/                         # Input images for local testing
+├── output/                        # Generated images (local testing)
+└── tests/                         # Unit tests
 ```
 
-### Flux de traitement
+### Processing Flow
 
 ```mermaid
 graph LR
-    A[Requête API] --> B[RunPod Handler]
+    A[API Request] --> B[RunPod Handler]
     B --> C{Network Volume?}
-    C -->|Oui| D[Symlink /workspace]
-    C -->|Non| E[Use Container ComfyUI]
+    C -->|Yes| D[Symlink /workspace]
+    C -->|No| E[Use Container ComfyUI]
     D --> F[Start ComfyUI]
     E --> F
     F --> G[Validate Resources]
@@ -112,254 +112,150 @@ graph LR
     N --> O[Return Response]
 ```
 
-## Prérequis
+## Prerequisites
 
-### Pour le déploiement RunPod
+### For RunPod deployment
 
-- ✅ Compte RunPod actif
-- ✅ Clé API RunPod ([obtenir ici](https://www.runpod.io/console/user/settings))
-- ✅ Image Docker hébergée (Docker Hub, GHCR, ou autre registry)
-- ✅ Network Volume RunPod (optionnel mais recommandé) avec ComfyUI pré-installé
+- ✅ Active RunPod account
+- ✅ RunPod API key ([get it here](https://www.runpod.io/console/user/settings))
+- ✅ Hosted Docker image (Docker Hub, GHCR, or other registry)
+- ✅ RunPod Network Volume (optional but recommended) with pre-installed ComfyUI
 
-### Pour le développement local
+### For local development
 
-- ✅ Docker Desktop avec support GPU (NVIDIA)
+- ✅ Docker Desktop with GPU support (NVIDIA)
 - ✅ Docker Compose v2+
-- ✅ NVIDIA GPU avec drivers installés
-- ✅ Minimum 8GB VRAM recommandé
-- ✅ Git et Git LFS
+- ✅ NVIDIA GPU with installed drivers
+- ✅ Minimum 8GB VRAM recommended
+- ✅ Git and Git LFS
 
-## Installation Rapide
+## Quick Start
 
-### Méthode 1 : Utiliser l'image pré-construite (Recommandé)
+### Method 1: Use pre-built image (Recommended)
 
 ```bash
-# L'image est automatiquement buildée par GitHub Actions
+# Image is automatically built by GitHub Actions
 docker pull vlop12ui/runpod-comfyui-qwen:latest
 ```
 
-### Méthode 2 : Build depuis les sources
+### Method 2: Build from source
 
 ```bash
-# 1. Cloner le repo
+# 1. Clone the repo
 git clone https://github.com/unicorncomfyui/serverless_runpod.git
 cd serverless_runpod
 
-# 2. Checkout sur develop (branche active)
+# 2. Checkout to develop (active branch)
 git checkout develop
 
-# 3. Copier l'exemple d'environnement
+# 3. Copy environment example
 cp .env.example .env
 
-# 4. Éditer .env avec vos paramètres
-nano .env  # ou votre éditeur préféré
+# 4. Edit .env with your parameters
+nano .env  # or your preferred editor
 
-# 5. Build l'image
+# 5. Build the image
 docker build -t runpod-comfyui-qwen:latest .
 
-# 6. Test local (optionnel)
+# 6. Local test (optional)
 docker-compose up
 ```
 
-## Configuration Détaillée
+## Detailed Configuration
 
-### Variables d'environnement
+### Environment Variables
 
-#### Configuration RunPod (Obligatoire pour production)
+#### RunPod Configuration (Required for production)
 
-| Variable | Description | Valeur par défaut | Obligatoire |
-|----------|-------------|-------------------|-------------|
-| `RUNPOD_API_KEY` | Clé API RunPod pour authentification | - | ✅ Production |
-| `RUNPOD_ENDPOINT_ID` | ID de l'endpoint serverless | - | ❌ |
+| Variable | Description | Default value | Required |
+|----------|-------------|---------------|----------|
+| `RUNPOD_API_KEY` | RunPod API key for authentication | - | ✅ Production |
+| `RUNPOD_ENDPOINT_ID` | Serverless endpoint ID | - | ❌ |
 
-#### Configuration ComfyUI
+#### ComfyUI Configuration
 
-| Variable | Description | Valeur par défaut | Obligatoire |
-|----------|-------------|-------------------|-------------|
-| `COMFYUI_PORT` | Port d'écoute de ComfyUI | `3000` | ❌ |
-| `COMFYUI_HOST` | Host de l'API ComfyUI | `http://127.0.0.1:3000` | ❌ |
+| Variable | Description | Default value | Required |
+|----------|-------------|---------------|----------|
+| `COMFYUI_PORT` | ComfyUI listening port | `3000` | ❌ |
+| `COMFYUI_HOST` | ComfyUI API host | `http://127.0.0.1:3000` | ❌ |
 
-#### Gestion des ressources
+#### Resource Management
 
-| Variable | Description | Valeur par défaut | Obligatoire |
-|----------|-------------|-------------------|-------------|
-| `TIMEOUT_SECONDS` | Timeout max pour un job (secondes) | `600` (10 min) | ❌ |
-| `MIN_FREE_DISK_GB` | Espace disque minimum requis (GB) | `0.5` | ❌ |
-| `MIN_FREE_MEMORY_GB` | RAM minimum disponible (GB) | `1.0` | ❌ |
+| Variable | Description | Default value | Required |
+|----------|-------------|---------------|----------|
+| `TIMEOUT_SECONDS` | Max timeout for a job (seconds) | `600` (10 min) | ❌ |
+| `MIN_FREE_DISK_GB` | Minimum required disk space (GB) | `0.5` | ❌ |
+| `MIN_FREE_MEMORY_GB` | Minimum available RAM (GB) | `1.0` | ❌ |
 
-#### Modèles et chemins
+#### Logging and Debug
 
-| Variable | Description | Valeur par défaut | Obligatoire |
-|----------|-------------|-------------------|-------------|
-| `DEFAULT_MODEL` | Modèle checkpoint par défaut | `qwen_model.safetensors` | ❌ |
-| `UPSCALE_MODEL` | Modèle d'upscaling | `4xLSDIR.pth` | ❌ |
-| `EYES_MODEL` | Modèle de détection des yeux | `Eyes.pt` | ❌ |
+| Variable | Description | Possible values | Default |
+|----------|-------------|-----------------|---------|
+| `LOG_LEVEL` | Log verbosity level | `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO` |
 
-#### Logging et Debug
+## RunPod Network Volume
 
-| Variable | Description | Valeurs possibles | Défaut |
-|----------|-------------|-------------------|--------|
-| `LOG_LEVEL` | Niveau de verbosité des logs | `DEBUG`, `INFO`, `WARNING`, `ERROR` | `INFO` |
-| `SNAP_LOG_API_URL` | URL API pour logs externes (optionnel) | URL valide | - |
-| `SNAP_LOG_API_KEY` | Clé API pour logs externes | - | - |
+### Why use a Network Volume?
 
-### Exemple de fichier .env complet
+1. **Persistence**: Models retained between restarts
+2. **Performance**: No need to download models at each startup
+3. **Cost savings**: Share models between multiple endpoints
+4. **Flexibility**: Update models without rebuild
 
-```env
-# RunPod Configuration
-RUNPOD_API_KEY=YOUR_RUNPOD_API_KEY_HERE
-RUNPOD_ENDPOINT_ID=your-endpoint-id
-
-# ComfyUI Configuration
-COMFYUI_PORT=3000
-COMFYUI_HOST=http://127.0.0.1:3000
-
-# Model Configuration
-DEFAULT_MODEL=qwen_model.safetensors
-UPSCALE_MODEL=4xLSDIR.pth
-EYES_MODEL=Eyes.pt
-
-# Resource Limits
-TIMEOUT_SECONDS=600
-MIN_FREE_DISK_GB=0.5
-MIN_FREE_MEMORY_GB=1.0
-
-# Logging
-LOG_LEVEL=INFO
-
-# Optional: External Logging
-# SNAP_LOG_API_URL=https://your-logging-service.com/api
-# SNAP_LOG_API_KEY=your_logging_api_key
-```
-
-## Network Volume RunPod
-
-### Pourquoi utiliser un Network Volume ?
-
-1. **Persistance** : Modèles conservés entre les redémarrages
-2. **Performance** : Pas besoin de télécharger les modèles à chaque démarrage
-3. **Économies** : Partagez les modèles entre plusieurs endpoints
-4. **Flexibilité** : Mettez à jour les modèles sans rebuild
-
-### Structure recommandée du Network Volume
+### Recommended Network Volume structure
 
 ```
-/runpod-volume/  (devient /workspace via symlink)
-├── ComfyUI/                    # Installation ComfyUI
+/runpod-volume/  (becomes /workspace via symlink)
+├── ComfyUI/                    # ComfyUI installation
 │   ├── main.py
 │   ├── models/
-│   │   ├── checkpoints/        # Vos modèles .safetensors
+│   │   ├── checkpoints/        # Your .safetensors models
 │   │   ├── upscale_models/     # 4xLSDIR.pth, Eyes.pt, etc.
 │   │   ├── loras/
 │   │   ├── vae/
 │   │   └── embeddings/
-│   ├── custom_nodes/           # Nodes personnalisés (optionnel)
-│   ├── output/                 # Images générées
-│   └── input/                  # Images source
-├── venv/                       # Environnement virtuel Python (optionnel)
+│   ├── custom_nodes/           # Custom nodes (optional)
+│   ├── output/                 # Generated images
+│   └── input/                  # Source images
+├── venv/                       # Python virtual environment (optional)
 │   └── bin/activate
-└── logs/                       # Logs persistants
+└── logs/                       # Persistent logs
 ```
 
-### Configuration avec Network Volume
+## RunPod Deployment
 
-#### 1. Créer le Network Volume sur RunPod
+### Step 1: Prepare Docker image
 
-1. Allez dans **Storage** → **Network Volumes**
-2. Cliquez sur **+ New Network Volume**
-3. Configurez :
-   - **Name** : `comfyui-qwen-models`
-   - **Size** : 50GB minimum (selon vos modèles)
-   - **Region** : Même région que vos workers
+Use the pre-built image: `vlop12ui/runpod-comfyui-qwen:latest`
 
-#### 2. Installer ComfyUI sur le Volume
+### Step 2: Create Serverless Endpoint
 
-**Option A : Via un Pod temporaire**
+#### Via RunPod interface
 
-```bash
-# Lancez un pod avec le volume monté
-# Puis dans le pod :
-cd /workspace
-git clone https://github.com/comfyanonymous/ComfyUI.git
-cd ComfyUI
-pip install -r requirements.txt
+1. **Access Serverless**
+   - Go to [RunPod Console](https://www.runpod.io/console/serverless)
+   - Click **+ New Endpoint**
 
-# Téléchargez vos modèles
-cd models/checkpoints
-wget https://your-model-url/qwen_model.safetensors
+2. **Basic configuration**
+   - **Endpoint Name**: `comfyui-qwen-worker`
+   - **Container Image**: `vlop12ui/runpod-comfyui-qwen:latest`
+   - **Container Disk**: 10 GB minimum
 
-cd ../upscale_models
-wget https://your-model-url/4xLSDIR.pth
-```
+3. **GPU Configuration**
+   - **GPU Type**:
+     - Recommended: RTX 5090 (~$0.90/hour) - Blackwell architecture (sm_120)
+     - Alternative: A100 40GB (~$1.10/hour)
+   - **Active Workers**: 0 (auto-scaling)
+   - **Max Workers**: 3-5 depending on your budget
+   - **GPUs per Worker**: 1
 
-**Option B : Upload depuis votre machine**
+4. **Advanced Configuration**
+   - **Idle Timeout**: 30 seconds
+   - **Execution Timeout**: 600 seconds (10 min)
+   - **Max Concurrent Requests per Worker**: 1
 
-Utilisez `runpod` CLI ou l'interface web pour uploader directement.
-
-#### 3. Monter le Volume dans l'Endpoint
-
-Lors de la création de l'endpoint serverless :
-- **Network Volume** : Sélectionnez votre volume
-- Le volume sera automatiquement monté sur `/runpod-volume`
-- Le [start.sh](start.sh:7-11) créera automatiquement le symlink vers `/workspace`
-
-## Déploiement sur RunPod
-
-### Étape 1 : Préparer l'image Docker
-
-#### Option A : Utiliser GitHub Actions (Automatique)
-
-L'image est buildée automatiquement à chaque push sur `develop` :
-
-```bash
-# Vérifiez que le build passe
-https://github.com/unicorncomfyui/serverless_runpod/actions
-
-# L'image sera disponible sur :
-vlop12ui/runpod-comfyui-qwen:latest
-```
-
-#### Option B : Build et Push manuel
-
-```bash
-# 1. Login Docker Hub
-docker login
-
-# 2. Build
-docker build -t your-username/runpod-comfyui-qwen:latest .
-
-# 3. Push
-docker push your-username/runpod-comfyui-qwen:latest
-```
-
-### Étape 2 : Créer l'Endpoint Serverless
-
-#### Via l'interface RunPod
-
-1. **Accédez à Serverless**
-   - Allez sur [RunPod Console](https://www.runpod.io/console/serverless)
-   - Cliquez sur **+ New Endpoint**
-
-2. **Configuration de base**
-   - **Endpoint Name** : `comfyui-qwen-worker`
-   - **Container Image** : `vlop12ui/runpod-comfyui-qwen:latest`
-   - **Container Disk** : 10 GB minimum
-
-3. **Configuration GPU**
-   - **GPU Type** :
-     - Recommandé : RTX 5090 (~$0.90/heure) - Architecture Blackwell (sm_120)
-     - Alternative : A100 40GB (~$1.10/heure)
-   - **Active Workers** : 0 (auto-scaling)
-   - **Max Workers** : 3-5 selon votre budget
-   - **GPUs per Worker** : 1
-
-4. **Configuration Advanced**
-   - **Idle Timeout** : 30 secondes
-   - **Execution Timeout** : 600 secondes (10 min)
-   - **Max Concurrent Requests per Worker** : 1
-
-5. **Network Volume** (si disponible)
-   - Sélectionnez votre volume `comfyui-qwen-models`
+5. **Network Volume** (if available)
+   - Select your volume `comfyui-qwen-models`
 
 6. **Environment Variables**
    ```
@@ -368,109 +264,22 @@ docker push your-username/runpod-comfyui-qwen:latest
    LOG_LEVEL=INFO
    ```
 
-7. **Cliquez sur "Deploy"**
+7. **Click "Deploy"**
 
-### Étape 3 : Tester l'Endpoint
+## API Usage
 
-Une fois déployé, vous recevrez un **Endpoint ID**. Testez-le :
+### Available Endpoints
 
-```python
-import runpod
-import base64
-from PIL import Image
-from io import BytesIO
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/run` or `/runsync` | POST | Synchronous execution (waits for response) |
+| `/run` (async) | POST | Asynchronous execution (returns job_id) |
+| `/status/{job_id}` | GET | Status of an async job |
+| `/health` | GET | Endpoint health check |
 
-# Configuration
-runpod.api_key = "YOUR_RUNPOD_API_KEY"
-endpoint = runpod.Endpoint("YOUR_ENDPOINT_ID")
+### Custom workflow (ComfyUI API format)
 
-# Requête simple
-request = {
-    "input": {
-        "workflow_type": "txt2img",
-        "prompt": "a beautiful sunset over mountains, detailed, high quality",
-        "negative_prompt": "blurry, low quality, distorted",
-        "steps": 20,
-        "cfg_scale": 7.0,
-        "width": 512,
-        "height": 512,
-        "seed": 42
-    }
-}
-
-# Lancer le job
-print("Envoi de la requête...")
-run_request = endpoint.run(request)
-
-# Attendre et récupérer le résultat
-print("Traitement en cours...")
-result = run_request.output(timeout=600)
-
-# Décoder et sauvegarder l'image
-if "images" in result and len(result["images"]) > 0:
-    image_data = base64.b64decode(result["images"][0])
-    image = Image.open(BytesIO(image_data))
-    image.save("output.png")
-    print("✅ Image sauvegardée : output.png")
-else:
-    print("❌ Erreur:", result.get("error", "Unknown error"))
-```
-
-## Utilisation de l'API
-
-### Endpoints disponibles
-
-RunPod Serverless expose automatiquement ces endpoints :
-
-| Endpoint | Méthode | Description |
-|----------|---------|-------------|
-| `/run` ou `/runsync` | POST | Exécution synchrone (attend la réponse) |
-| `/run` (async) | POST | Exécution asynchrone (retourne job_id) |
-| `/status/{job_id}` | GET | Statut d'un job asynchrone |
-| `/health` | GET | Health check de l'endpoint |
-
-### Format de requête détaillé
-
-#### Workflow txt2img
-
-```json
-{
-  "input": {
-    "workflow_type": "txt2img",
-    "prompt": "masterpiece, best quality, 1girl, detailed face",
-    "negative_prompt": "worst quality, low quality, bad anatomy",
-    "seed": 12345,
-    "steps": 28,
-    "cfg_scale": 7.5,
-    "width": 768,
-    "height": 768,
-    "sampler_name": "euler_a",
-    "scheduler": "karras",
-    "model": "qwen_model.safetensors"
-  }
-}
-```
-
-#### Workflow img2img
-
-```json
-{
-  "input": {
-    "workflow_type": "img2img",
-    "prompt": "enhance this image, more details",
-    "negative_prompt": "blurry, low quality",
-    "input_image": "base64_encoded_string_here...",
-    "denoise": 0.7,
-    "steps": 25,
-    "cfg_scale": 7.0,
-    "seed": 54321
-  }
-}
-```
-
-#### Workflow custom (format API ComfyUI)
-
-Pour utiliser un workflow custom au format API ComfyUI:
+To use a custom workflow in ComfyUI API format:
 
 ```json
 {
@@ -479,20 +288,18 @@ Pour utiliser un workflow custom au format API ComfyUI:
       "3": {
         "inputs": {
           "seed": 42,
-          "steps": 20,
-          ...
+          "steps": 20
         },
         "class_type": "KSampler"
-      },
-      ...
+      }
     }
   }
 }
 ```
 
-#### Workflow custom (format UI ComfyUI)
+### Custom workflow (ComfyUI UI format)
 
-Vous pouvez également envoyer directement le JSON exporté de l'UI ComfyUI. Le handler convertira automatiquement au format API:
+You can also send the JSON exported from ComfyUI UI directly. The handler will automatically convert it to API format:
 
 ```json
 {
@@ -504,47 +311,25 @@ Vous pouvez également envoyer directement le JSON exporté de l'UI ComfyUI. Le 
           "id": 1,
           "type": "CheckpointLoaderSimple",
           "widgets_values": ["model.safetensors"]
-        },
-        ...
+        }
       ],
-      "links": [...],
-      "groups": [...]
+      "links": [],
+      "groups": []
     }
   }
 }
 ```
 
-**Exemple complet prêt à l'emploi (Z_Image_Turbo):**
-
-Copiez-collez directement cet exemple dans l'UI RunPod ou via l'API:
-
-<details>
-<summary>Cliquez pour voir l'exemple complet JSON (workflow Qwen Z_Image_Turbo)</summary>
-
-```json
-{
-  "input": {
-    "workflow": VOTRE_WORKFLOW_ICI
-  }
-}
-```
-
-Remplacez `VOTRE_WORKFLOW_ICI` par le contenu du fichier `Z_Image_Turbo.json` fourni.
-
-Pour tester rapidement, utilisez le fichier exemple dans `/workflows/zimage_turbo.json` sur votre Network Volume.
-
-</details>
-
-**Note importante:** Le workflow doit contenir les modèles qui existent sur votre Network Volume. Les fichiers attendus pour le workflow Z_Image_Turbo sont:
+**Important note:** The workflow must contain models that exist on your Network Volume. Expected files for the Z_Image_Turbo workflow are:
 - `z_image_turbo_bf16.safetensors` (model)
 - `ae.safetensors` (VAE)
 - `qwen_3_4b.safetensors` (CLIP)
 
-**À propos des LoRA :** Les LoRA (Low-Rank Adaptation) sont des fichiers de fine-tuning légers qui permettent d'ajuster un modèle de base pour des styles ou concepts spécifiques sans avoir à entraîner un modèle complet. Ils sont optionnels et peuvent être ajoutés au workflow si nécessaire dans `/runpod-volume/ComfyUI/models/loras/`.
+**About LoRA:** LoRA (Low-Rank Adaptation) are lightweight fine-tuning files that allow adjusting a base model for specific styles or concepts without having to train a complete model. They are optional and can be added to the workflow if needed in `/runpod-volume/ComfyUI/models/loras/`.
 
-### Format de réponse
+### Response Format
 
-#### Succès
+#### Success
 
 ```json
 {
@@ -553,17 +338,16 @@ Pour tester rapidement, utilisez le fichier exemple dans `/workflows/zimage_turb
   "id": "job-abc-123",
   "output": {
     "images": [
-      "iVBORw0KGgoAAAANSUhEUgAA...",  // Base64 encoded
       "iVBORw0KGgoAAAANSUhEUgAA..."
     ],
     "prompt_id": "uuid-123-456",
-    "workflow_type": "txt2img"
+    "workflow_type": "custom"
   },
   "status": "COMPLETED"
 }
 ```
 
-#### Erreur
+#### Error
 
 ```json
 {
@@ -573,297 +357,119 @@ Pour tester rapidement, utilisez le fichier exemple dans `/workflows/zimage_turb
 }
 ```
 
-## Workflows Disponibles
+## Installed Custom Nodes
 
-### txt2img - Génération texte vers image
-
-Génère une image depuis une description textuelle.
-
-**Paramètres** :
-- `prompt` (string, requis) : Description de l'image désirée
-- `negative_prompt` (string, optionnel) : Éléments à éviter
-- `width` (int, optionnel) : Largeur (512/768/1024), défaut 512
-- `height` (int, optionnel) : Hauteur (512/768/1024), défaut 512
-- `steps` (int, optionnel) : Nombre d'étapes (1-150), défaut 20
-- `cfg_scale` (float, optionnel) : Guidance (1.0-30.0), défaut 7.0
-- `seed` (int, optionnel) : Seed aléatoire (0-4294967295), défaut random
-- `sampler_name` (string, optionnel) : euler, euler_a, dpm_2, etc.
-- `scheduler` (string, optionnel) : normal, karras, exponential
-- `model` (string, optionnel) : Nom du checkpoint, défaut qwen_model.safetensors
-
-### img2img - Transformation d'image
-
-Transforme une image existante selon un prompt.
-
-**Paramètres** :
-- Tous les paramètres de txt2img, plus :
-- `input_image` (string, requis) : Image encodée en base64
-- `denoise` (float, optionnel) : Force de dénoising (0.0-1.0), défaut 0.75
-
-### custom - Workflow personnalisé
-
-Exécute un workflow ComfyUI personnalisé complet.
-
-**Paramètres** :
-- `custom_workflow` (object, requis) : Workflow JSON ComfyUI complet
-
-## Custom Nodes Installés
-
-Le projet inclut 21 custom nodes ComfyUI pré-installés :
+The project includes 21 pre-installed ComfyUI custom nodes:
 
 | Node | Description | Repository |
 |------|-------------|------------|
-| **UltimateSDUpscale** | Upscaling avancé pour SD | [ssitu/ComfyUI_UltimateSDUpscale](https://github.com/ssitu/ComfyUI_UltimateSDUpscale) |
-| **KJNodes** | Collection de nodes utilitaires | [kijai/ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) |
-| **rgthree-comfy** | Nodes pour améliorer le workflow | [rgthree/rgthree-comfy](https://github.com/rgthree/rgthree-comfy) |
-| **JPS-Nodes** | Nodes personnalisés variés | [JPS-GER/ComfyUI_JPS-Nodes](https://github.com/JPS-GER/ComfyUI_JPS-Nodes) |
-| **Comfyroll** | Nodes de style et effets | [Suzie1/ComfyUI_Comfyroll_CustomNodes](https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes) |
-| **comfy-plasma** | Effets plasma et gradients | [Jordach/comfy-plasma](https://github.com/Jordach/comfy-plasma) |
-| **Impact Pack** | Pack complet pour post-traitement | [ltdrdata/ComfyUI-Impact-Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) |
-| **RES4LYF** | Nodes de résolution et qualité | [ClownsharkBatwing/RES4LYF](https://github.com/ClownsharkBatwing/RES4LYF) |
-| **Easy-Use** | Simplification de workflows | [yolain/ComfyUI-Easy-Use](https://github.com/yolain/ComfyUI-Easy-Use) |
-| **WAS Node Suite** | Suite complète de nodes | [WASasquatch/was-node-suite-comfyui](https://github.com/WASasquatch/was-node-suite-comfyui) |
-| **Logic** | Nodes logiques et conditionnels | [theUpsider/ComfyUI-Logic](https://github.com/theUpsider/ComfyUI-Logic) |
-| **Essentials** | Nodes essentiels manquants | [cubiq/ComfyUI_essentials](https://github.com/cubiq/ComfyUI_essentials) |
-| **Image Picker** | Sélection d'images | [chrisgoringe/cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) |
-| **LayerStyle** | Effets de style par couches | [chflame163/ComfyUI_LayerStyle](https://github.com/chflame163/ComfyUI_LayerStyle) |
-| **Impact Subpack** | Extension d'Impact Pack | [ltdrdata/ComfyUI-Impact-Subpack](https://github.com/ltdrdata/ComfyUI-Impact-Subpack) |
-| **Detail Daemon** | Amélioration des détails | [Jonseed/ComfyUI-Detail-Daemon](https://github.com/Jonseed/ComfyUI-Detail-Daemon) |
-| **Mixlab Nodes** | Collection mixte de nodes | [shadowcz007/comfyui-mixlab-nodes](https://github.com/shadowcz007/comfyui-mixlab-nodes) |
-| **LayerStyle Advance** | LayerStyle avancé | [chflame163/ComfyUI_LayerStyle_Advance](https://github.com/chflame163/ComfyUI_LayerStyle_Advance) |
-| **Mikey Nodes** | Nodes personnalisés Mikey | [bash-j/mikey_nodes](https://github.com/bash-j/mikey_nodes) |
-| **Use Everywhere** | Connexions globales | [chrisgoringe/cg-use-everywhere](https://github.com/chrisgoringe/cg-use-everywhere) |
-| **ComfyLiterals** | Support de littéraux | [M1kep/ComfyLiterals](https://github.com/M1kep/ComfyLiterals) |
+| **UltimateSDUpscale** | Advanced upscaling for SD | [ssitu/ComfyUI_UltimateSDUpscale](https://github.com/ssitu/ComfyUI_UltimateSDUpscale) |
+| **KJNodes** | Utility nodes collection | [kijai/ComfyUI-KJNodes](https://github.com/kijai/ComfyUI-KJNodes) |
+| **rgthree-comfy** | Workflow improvement nodes | [rgthree/rgthree-comfy](https://github.com/rgthree/rgthree-comfy) |
+| **JPS-Nodes** | Various custom nodes | [JPS-GER/ComfyUI_JPS-Nodes](https://github.com/JPS-GER/ComfyUI_JPS-Nodes) |
+| **Comfyroll** | Style and effects nodes | [Suzie1/ComfyUI_Comfyroll_CustomNodes](https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes) |
+| **comfy-plasma** | Plasma and gradient effects | [Jordach/comfy-plasma](https://github.com/Jordach/comfy-plasma) |
+| **Impact Pack** | Complete post-processing pack | [ltdrdata/ComfyUI-Impact-Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) |
+| **RES4LYF** | Resolution and quality nodes | [ClownsharkBatwing/RES4LYF](https://github.com/ClownsharkBatwing/RES4LYF) |
+| **Easy-Use** | Workflow simplification | [yolain/ComfyUI-Easy-Use](https://github.com/yolain/ComfyUI-Easy-Use) |
+| **WAS Node Suite** | Complete node suite | [WASasquatch/was-node-suite-comfyui](https://github.com/WASasquatch/was-node-suite-comfyui) |
+| **Logic** | Logical and conditional nodes | [theUpsider/ComfyUI-Logic](https://github.com/theUpsider/ComfyUI-Logic) |
+| **Essentials** | Missing essential nodes | [cubiq/ComfyUI_essentials](https://github.com/cubiq/ComfyUI_essentials) |
+| **Image Picker** | Image selection | [chrisgoringe/cg-image-picker](https://github.com/chrisgoringe/cg-image-picker) |
+| **LayerStyle** | Layer-based style effects | [chflame163/ComfyUI_LayerStyle](https://github.com/chflame163/ComfyUI_LayerStyle) |
 
-## Développement Local
+## Performance and Optimization
 
-### Prérequis
+### Average Processing Times
 
-```bash
-pip install -r requirements.txt
-```
-
-### Test du handler seul
-
-```bash
-# Simuler une requête
-python handler.py
-```
-
-### Test avec Docker Compose
-
-```bash
-# Lancer l'environnement complet
-docker-compose up --build
-
-# ComfyUI accessible sur http://localhost:3000
-```
-
-### Debug
-
-Activez les logs détaillés :
-
-```bash
-export LOG_LEVEL=DEBUG
-python handler.py
-```
-
-## Troubleshooting
-
-### Problèmes courants
-
-#### 1. Erreur "CUDA out of memory"
-
-**Symptômes** : Le job échoue avec une erreur OOM
-
-**Solutions** :
-```bash
-# Réduire la résolution
-"width": 512, "height": 512  # Au lieu de 1024x1024
-
-# Réduire batch_size dans le workflow
-"batch_size": 1
-
-# Utiliser une GPU avec plus de VRAM
-# RTX 4090 (24GB) au lieu de RTX 3090 (24GB)
-```
-
-#### 2. ComfyUI ne démarre pas
-
-**Symptômes** : Timeout lors du démarrage
-
-**Solutions** :
-```bash
-# Vérifier les logs
-docker-compose logs comfyui-worker
-
-# Vérifier que ComfyUI existe
-ls -la /workspace/ComfyUI  # ou /app/comfyui
-
-# Vérifier les modèles
-ls -la /workspace/ComfyUI/models/checkpoints/
-```
-
-#### 3. Network Volume non détecté
-
-**Symptômes** : Warning "No network volume found"
-
-**Solutions** :
-```bash
-# Vérifier que le volume est monté
-ls -la /runpod-volume
-
-# Vérifier les permissions
-chmod -R 755 /runpod-volume
-
-# Vérifier la configuration RunPod
-# Le volume doit être attaché à l'endpoint
-```
-
-#### 4. Timeout sur les jobs
-
-**Symptômes** : Job timeout après 600s
-
-**Solutions** :
-```bash
-# Augmenter le timeout
-ENV TIMEOUT_SECONDS=1200  # 20 minutes
-
-# Optimiser le workflow
-# - Réduire steps
-# - Utiliser samplers plus rapides (euler au lieu de dpm++)
-```
-
-#### 5. Erreur d'authentification Docker Hub
-
-**Symptômes** : Build GitHub Actions échoue avec "unauthorized"
-
-**Solutions** :
-```bash
-# Vérifier les secrets GitHub
-# Settings → Secrets → Actions
-# DOCKER_USERNAME et DOCKER_PASSWORD doivent être définis
-
-# Utiliser un Access Token au lieu du mot de passe
-# https://hub.docker.com/settings/security
-```
-
-### Logs et Debug
-
-```bash
-# Logs en temps réel (local)
-docker-compose logs -f comfyui-worker
-
-# Logs du container
-docker exec -it comfyui-serverless-worker tail -f /workspace/logs/comfyui-serverless.log
-
-# Logs RunPod
-# Accessibles dans le dashboard RunPod
-# Serverless → Votre endpoint → Logs
-```
-
-## Performances et Optimisation
-
-### Temps de traitement moyens
-
-| Résolution | Steps | GPU | Temps estimé |
-|-----------|-------|-----|--------------|
+| Resolution | Steps | GPU | Estimated Time |
+|-----------|-------|-----|----------------|
 | 512x512 | 12 | RTX 5090 | ~3-5s |
 | 1080x1920 | 12 | RTX 5090 | ~10-12s |
 | 1024x1024 | 20 | RTX 5090 | ~15-20s |
 | 512x512 | 50 | RTX 5090 | ~10-15s |
 | 1024x1024 | 50 | A100 | ~25-35s |
 
-### Optimisations recommandées
+### Recommended Optimizations
 
-1. **Utiliser le Network Volume** : Évite le téléchargement des modèles
-2. **Batch processing** : Grouper plusieurs images dans une requête
-3. **Sampler rapide** : `euler` ou `euler_a` au lieu de `dpm++`
-4. **Steps optimaux** : 20-28 steps suffisent généralement
-5. **Idle timeout court** : 30s pour réduire les coûts
+1. **Use Network Volume**: Avoids downloading models
+2. **Batch processing**: Group multiple images in one request
+3. **Fast sampler**: `euler` or `euler_a` instead of `dpm++`
+4. **Optimal steps**: 20-28 steps are usually sufficient
+5. **Short idle timeout**: 30s to reduce costs
 
-### Estimation des coûts
+### Cost Estimation
 
-**Exemple avec RTX 5090** (~$0.90/h = $0.00025/s) :
-- 1 image 512x512 (5s) : ~$0.00125
-- 1 image 1024x1024 (15s) : ~$0.00375
-- 1 image 1080x1920 (12s) : ~$0.003
-- 100 images 1080x1920/jour : ~$0.30/jour = ~$9/mois
+**Example with RTX 5090** (~$0.90/h = $0.00025/s):
+- 1 image 512x512 (5s): ~$0.00125
+- 1 image 1024x1024 (15s): ~$0.00375
+- 1 image 1080x1920 (12s): ~$0.003
+- 100 images 1080x1920/day: ~$0.30/day = ~$9/month
 
 ## FAQ
 
-**Q : Puis-je utiliser mes propres modèles ?**
-R : Oui, placez-les dans le Network Volume sous `/runpod-volume/ComfyUI/models/checkpoints/`
+**Q: Can I use my own models?**
+A: Yes, place them in the Network Volume under `/runpod-volume/ComfyUI/models/checkpoints/`
 
-**Q : Combien de workers dois-je configurer ?**
-R : Commencez avec Max 3, ajustez selon votre charge. Min=0 pour auto-scaling complet.
+**Q: How many workers should I configure?**
+A: Start with Max 3, adjust based on your load. Min=0 for complete auto-scaling.
 
-**Q : L'image Docker est-elle publique ?**
-R : Oui, `vlop12ui/runpod-comfyui-qwen:latest` est publique sur Docker Hub.
+**Q: Is the Docker image public?**
+A: Yes, `vlop12ui/runpod-comfyui-qwen:latest` is public on Docker Hub.
 
-**Q : Puis-je ajouter des custom nodes ?**
-R : Oui, clonez-les dans `/runpod-volume/ComfyUI/custom_nodes/` ou modifiez le Dockerfile.
+**Q: Can I add custom nodes?**
+A: Yes, clone them in `/runpod-volume/ComfyUI/custom_nodes/` or modify the Dockerfile.
 
-**Q : Quelle est la différence avec un pod normal ?**
-R : Serverless = auto-scaling + paiement à l'utilisation. Pod = toujours actif + paiement continu.
+**Q: What's the difference with a normal pod?**
+A: Serverless = auto-scaling + pay-per-use. Pod = always active + continuous billing.
 
-**Q : Puis-je utiliser LoRA ?**
-R : Oui, placez les fichiers .safetensors dans `/runpod-volume/ComfyUI/models/loras/`
-
-**Q : Comment débugger un workflow personnalisé ?**
-R : Testez-le d'abord dans ComfyUI web, exportez le JSON, puis utilisez-le dans `custom_workflow`.
+**Q: Can I use LoRA?**
+A: Yes, place .safetensors files in `/runpod-volume/ComfyUI/models/loras/`
 
 ---
 
-## Contribution
+## Contributing
 
-Les contributions sont les bienvenues !
+Contributions are welcome!
 
-1. Fork le projet
-2. Créez une branche feature (`git checkout -b feature/amazing-feature`)
-3. Committez vos changements (`git commit -m 'Add amazing feature'`)
-4. Push vers la branche (`git push origin feature/amazing-feature`)
-5. Ouvrez une Pull Request
+1. Fork the project
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-## Licence
+## License
 
-Ce projet est sous licence **AGPL-3.0** (héritée du template ComfyUI Qwen).
+This project is licensed under **AGPL-3.0** (inherited from the ComfyUI Qwen template).
 
-Cela signifie que si vous utilisez ce code pour fournir un service réseau, vous devez rendre votre code source disponible.
+This means if you use this code to provide a network service, you must make your source code available.
 
 ## Roadmap
 
-- [ ] Support ControlNet
-- [ ] Support LoRA dynamique
-- [ ] Cache des modèles entre workers
-- [ ] Métriques Prometheus
-- [ ] Webhooks pour notifications
-- [ ] Support de batch processing optimisé
-- [ ] Interface web de gestion
-- [ ] Support multi-modèles simultanés
+- [ ] ControlNet support
+- [ ] Dynamic LoRA support
+- [ ] Model caching between workers
+- [ ] Prometheus metrics
+- [ ] Webhooks for notifications
+- [ ] Optimized batch processing support
+- [ ] Web management interface
+- [ ] Simultaneous multi-model support
 
-## Support et Documentation
+## Support and Documentation
 
-### Liens utiles
+### Useful Links
 
-- **Documentation RunPod** : https://docs.runpod.io/
-- **Documentation ComfyUI** : https://github.com/comfyanonymous/ComfyUI
-- **Issues GitHub** : https://github.com/unicorncomfyui/serverless_runpod/issues
-- **Template original** : https://github.com/Hearmeman24/comfyui-qwen-template
-
-### Contact
-
-Pour toute question :
-- Ouvrir une issue sur GitHub
-- Consulter la FAQ ci-dessus
-- Vérifier les logs RunPod
+- **RunPod Documentation**: https://docs.runpod.io/
+- **ComfyUI Documentation**: https://github.com/comfyanonymous/ComfyUI
+- **GitHub Issues**: https://github.com/unicorncomfyui/serverless_runpod/issues
+- **Original Template**: https://github.com/Hearmeman24/comfyui-qwen-template
 
 ---
 
-**Développé pour RunPod Serverless**
-- Base : CUDA 12.8.1 + cuDNN + Ubuntu 24.04
+**Developed for RunPod Serverless**
+- Base: CUDA 12.8.1 + cuDNN + Ubuntu 24.04
 - Python 3.11
 - ComfyUI + 21 Custom Nodes
-- Auto-scaling multi-worker
+- Multi-worker auto-scaling
 
-*Dernière mise à jour : Décembre 2025*
+*Last update: December 2025*
