@@ -106,15 +106,24 @@ if ! wait_for_comfyui; then
     exit 1
 fi
 
-# Deactivate venv if it was activated (handler uses its own environment)
+# Deactivate venv if it was activated (handler uses system Python)
 if [ -n "$VIRTUAL_ENV" ]; then
+    echo "Deactivating virtual environment: $VIRTUAL_ENV"
     deactivate
 fi
+
+# Verify handler dependencies before starting
+echo "Verifying handler dependencies..."
+python --version
+python -m pip list | grep -E "(requests|runpod|aiohttp|Pillow)" || {
+    echo "ERROR: Handler dependencies not found. Installing now..."
+    python -m pip install --no-cache-dir -r /app/requirements.txt
+}
 
 # Start the RunPod handler
 echo "Starting RunPod handler..."
 cd /app
-python3 -u handler.py
+python -u handler.py
 
 # If handler exits, kill ComfyUI
 kill $COMFYUI_PID 2>/dev/null || true

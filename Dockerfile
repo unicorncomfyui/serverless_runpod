@@ -117,51 +117,15 @@ RUN cd /app/comfyui/custom_nodes && \
     git clone --depth 1 https://github.com/ltdrdata/ComfyUI-Impact-Subpack.git && \
     rm -rf /tmp/* /var/tmp/*
 
-# Install requirements for custom nodes (in smaller batches)
-RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Logic \
-               /app/comfyui/custom_nodes/cg-use-everywhere \
-               /app/comfyui/custom_nodes/cg-image-picker \
-               /app/comfyui/custom_nodes/ComfyLiterals \
-               /app/comfyui/custom_nodes/comfy-plasma \
-               /app/comfyui/custom_nodes/RES4LYF \
-               /app/comfyui/custom_nodes/ComfyUI_JPS-Nodes; do \
+# Install requirements for ALL custom nodes in one layer (faster build)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    for dir in /app/comfyui/custom_nodes/*; do \
         if [ -f "$dir/requirements.txt" ]; then \
-            pip install -r "$dir/requirements.txt" || true; \
-        fi; \
-    done \
-    && rm -rf /tmp/* /var/tmp/*
-
-RUN for dir in /app/comfyui/custom_nodes/rgthree-comfy \
-               /app/comfyui/custom_nodes/ComfyUI-KJNodes \
-               /app/comfyui/custom_nodes/ComfyUI_essentials \
-               /app/comfyui/custom_nodes/ComfyUI-Detail-Daemon \
-               /app/comfyui/custom_nodes/mikey_nodes; do \
-        if [ -f "$dir/requirements.txt" ]; then \
-            pip install -r "$dir/requirements.txt" || true; \
-        fi; \
-    done \
-    && rm -rf /tmp/* /var/tmp/*
-
-RUN for dir in /app/comfyui/custom_nodes/ComfyUI_UltimateSDUpscale \
-               /app/comfyui/custom_nodes/ComfyUI_Comfyroll_CustomNodes \
-               /app/comfyui/custom_nodes/was-node-suite-comfyui \
-               /app/comfyui/custom_nodes/ComfyUI-Easy-Use \
-               /app/comfyui/custom_nodes/ComfyUI_LayerStyle \
-               /app/comfyui/custom_nodes/ComfyUI_LayerStyle_Advance \
-               /app/comfyui/custom_nodes/comfyui-mixlab-nodes; do \
-        if [ -f "$dir/requirements.txt" ]; then \
-            pip install -r "$dir/requirements.txt" || true; \
-        fi; \
-    done \
-    && rm -rf /tmp/* /var/tmp/*
-
-# Impact Pack nodes (may download models - cleanup aggressively)
-RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Impact-Pack \
-               /app/comfyui/custom_nodes/ComfyUI-Impact-Subpack; do \
-        if [ -f "$dir/requirements.txt" ]; then \
+            echo "Installing requirements for $(basename $dir)..."; \
             pip install -r "$dir/requirements.txt" || true; \
         fi; \
         if [ -f "$dir/install.py" ]; then \
+            echo "Running install.py for $(basename $dir)..."; \
             cd "$dir" && python install.py || true; \
         fi; \
     done \
@@ -172,7 +136,8 @@ RUN for dir in /app/comfyui/custom_nodes/ComfyUI-Impact-Pack \
 # Copy application files and install handler dependencies
 # Install AFTER custom nodes to ensure dependencies are not removed
 COPY requirements.txt /app/
-RUN pip install --no-cache-dir -r requirements.txt \
+RUN python -m pip install --no-cache-dir -r /app/requirements.txt \
+    && python -m pip list | grep -E "(requests|runpod|aiohttp|Pillow)" \
     && rm -rf /tmp/* /var/tmp/*
 
 COPY handler.py /app/
