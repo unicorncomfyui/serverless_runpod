@@ -19,6 +19,14 @@ TIMEOUT = int(os.environ.get('TIMEOUT_SECONDS', 600))
 DISK_MIN_FREE_BYTES = int(float(os.environ.get('MIN_FREE_DISK_GB', 0.5)) * 1024 * 1024 * 1024)
 MEMORY_MIN_FREE_BYTES = int(float(os.environ.get('MIN_FREE_MEMORY_GB', 1.0)) * 1024 * 1024 * 1024)
 
+# Detect ComfyUI directory (same logic as start.sh)
+if os.path.exists('/workspace/ComfyUI'):
+    COMFYUI_OUTPUT_DIR = '/workspace/ComfyUI/output'
+elif os.path.exists('/app/comfyui'):
+    COMFYUI_OUTPUT_DIR = '/app/comfyui/output'
+else:
+    COMFYUI_OUTPUT_DIR = '/app/comfyui/output'  # fallback
+
 # Setup logging
 logging.basicConfig(
     level=os.environ.get('LOG_LEVEL', 'INFO'),
@@ -276,6 +284,7 @@ def get_output_images(history: Dict[str, Any]) -> List[str]:
     images = []
     outputs = history.get('outputs', {})
 
+    logger.info(f"Using ComfyUI output directory: {COMFYUI_OUTPUT_DIR}")
     logger.info(f"History outputs structure: {list(outputs.keys())}")
 
     for node_id, output in outputs.items():
@@ -288,7 +297,7 @@ def get_output_images(history: Dict[str, Any]) -> List[str]:
                 logger.info(f"Image info: filename={filename}, subfolder={subfolder}")
 
                 if filename:
-                    image_path = Path(f'/app/comfyui/output/{subfolder}/{filename}') if subfolder else Path(f'/app/comfyui/output/{filename}')
+                    image_path = Path(f'{COMFYUI_OUTPUT_DIR}/{subfolder}/{filename}') if subfolder else Path(f'{COMFYUI_OUTPUT_DIR}/{filename}')
                     logger.info(f"Looking for image at: {image_path}")
 
                     if image_path.exists():
@@ -302,7 +311,7 @@ def get_output_images(history: Dict[str, Any]) -> List[str]:
                     else:
                         logger.warning(f"Image not found at {image_path}")
                         # List what's actually in the output directory
-                        output_dir = Path('/app/comfyui/output')
+                        output_dir = Path(COMFYUI_OUTPUT_DIR)
                         if output_dir.exists():
                             logger.info(f"Contents of {output_dir}: {list(output_dir.glob('**/*'))[:10]}")
 
@@ -389,4 +398,5 @@ def handler(event: Dict[str, Any]) -> Dict[str, Any]:
 
 if __name__ == '__main__':
     logger.info("Starting RunPod serverless handler...")
+    logger.info(f"ComfyUI output directory: {COMFYUI_OUTPUT_DIR}")
     runpod.serverless.start({'handler': handler})
