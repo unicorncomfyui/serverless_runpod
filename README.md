@@ -285,12 +285,136 @@ To use a custom workflow in ComfyUI API format:
 {
   "input": {
     "workflow": {
-      "3": {
+      "6": {
         "inputs": {
-          "seed": 42,
-          "steps": 20
+          "text": ["152", 0],
+          "clip": ["99", 0]
         },
-        "class_type": "KSampler"
+        "class_type": "CLIPTextEncode",
+        "_meta": {"title": "CLIP Text Encode (Positive Prompt)"}
+      },
+      "7": {
+        "inputs": {
+          "text": ["109", 0],
+          "clip": ["99", 0]
+        },
+        "class_type": "CLIPTextEncode",
+        "_meta": {"title": "CLIP Text Encode (Negative Prompt)"}
+      },
+      "8": {
+        "inputs": {
+          "samples": ["204", 0],
+          "vae": ["39", 0]
+        },
+        "class_type": "VAEDecode",
+        "_meta": {"title": "VAE Decode"}
+      },
+      "39": {
+        "inputs": {"vae_name": "ae.safetensors"},
+        "class_type": "VAELoader",
+        "_meta": {"title": "Load VAE"}
+      },
+      "95": {
+        "inputs": {
+          "width": ["197", 0],
+          "height": ["198", 0],
+          "batch_size": 1
+        },
+        "class_type": "EmptyLatentImage",
+        "_meta": {"title": "Empty Latent"}
+      },
+      "96": {
+        "inputs": {
+          "unet_name": "z_image_turbo_bf16.safetensors",
+          "weight_dtype": "default"
+        },
+        "class_type": "UNETLoader",
+        "_meta": {"title": "Load Diffusion Model"}
+      },
+      "99": {
+        "inputs": {
+          "clip_name": "qwen_3_4b.safetensors",
+          "type": "qwen_image",
+          "device": "default"
+        },
+        "class_type": "CLIPLoader",
+        "_meta": {"title": "Load CLIP"}
+      },
+      "109": {
+        "inputs": {
+          "text": "low quality, blurry, distorted, bad anatomy"
+        },
+        "class_type": "Text Prompt (JPS)",
+        "_meta": {"title": "Negative Prompt"}
+      },
+      "152": {
+        "inputs": {
+          "text": "a beautiful landscape, mountains at sunset, highly detailed, photorealistic"
+        },
+        "class_type": "Text Prompt (JPS)",
+        "_meta": {"title": "Positive Prompt"}
+      },
+      "173": {
+        "inputs": {"Number": "1"},
+        "class_type": "Float",
+        "_meta": {"title": "Resolution Multiplier"}
+      },
+      "179": {
+        "inputs": {"model": ["96", 0]},
+        "class_type": "ModelPassThrough",
+        "_meta": {"title": "ModelPass"}
+      },
+      "195": {
+        "inputs": {"value": 1080},
+        "class_type": "PrimitiveInt",
+        "_meta": {"title": "Image Width"}
+      },
+      "196": {
+        "inputs": {"value": 1920},
+        "class_type": "PrimitiveInt",
+        "_meta": {"title": "Image Height"}
+      },
+      "197": {
+        "inputs": {
+          "value": "a*b",
+          "a": ["195", 0],
+          "b": ["173", 0]
+        },
+        "class_type": "SimpleMath+",
+        "_meta": {"title": "🔧 Simple Math"}
+      },
+      "198": {
+        "inputs": {
+          "value": "a*b",
+          "a": ["196", 0],
+          "b": ["173", 0]
+        },
+        "class_type": "SimpleMath+",
+        "_meta": {"title": "🔧 Simple Math"}
+      },
+      "204": {
+        "inputs": {
+          "seed": 123456789,
+          "steps": 12,
+          "cfg": 1,
+          "sampler_name": "er_sde",
+          "scheduler": "simple",
+          "denoise": 1,
+          "model": ["179", 0],
+          "positive": ["6", 0],
+          "negative": ["7", 0],
+          "latent_image": ["95", 0]
+        },
+        "class_type": "KSampler",
+        "_meta": {"title": "KSampler"}
+      },
+      "205": {
+        "inputs": {
+          "filename_prefix": "ComfyUI",
+          "images": ["8", 0]
+        },
+        "class_type": "SaveImage",
+        "_meta": {"title": "Save Image"}
       }
     }
   }

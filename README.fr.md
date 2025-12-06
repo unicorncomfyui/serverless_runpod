@@ -470,21 +470,29 @@ RunPod Serverless expose automatiquement ces endpoints :
 
 #### Workflow custom (format API ComfyUI)
 
-Pour utiliser un workflow custom au format API ComfyUI:
+Pour utiliser un workflow custom au format API ComfyUI (exemple complet Z_Image_Turbo):
 
 ```json
 {
   "input": {
     "workflow": {
-      "3": {
-        "inputs": {
-          "seed": 42,
-          "steps": 20,
-          ...
-        },
-        "class_type": "KSampler"
-      },
-      ...
+      "6": {"inputs": {"text": ["152", 0], "clip": ["99", 0]}, "class_type": "CLIPTextEncode"},
+      "7": {"inputs": {"text": ["109", 0], "clip": ["99", 0]}, "class_type": "CLIPTextEncode"},
+      "8": {"inputs": {"samples": ["204", 0], "vae": ["39", 0]}, "class_type": "VAEDecode"},
+      "39": {"inputs": {"vae_name": "ae.safetensors"}, "class_type": "VAELoader"},
+      "95": {"inputs": {"width": ["197", 0], "height": ["198", 0], "batch_size": 1}, "class_type": "EmptyLatentImage"},
+      "96": {"inputs": {"unet_name": "z_image_turbo_bf16.safetensors", "weight_dtype": "default"}, "class_type": "UNETLoader"},
+      "99": {"inputs": {"clip_name": "qwen_3_4b.safetensors", "type": "qwen_image", "device": "default"}, "class_type": "CLIPLoader"},
+      "109": {"inputs": {"text": "low quality, blurry, distorted"}, "class_type": "Text Prompt (JPS)"},
+      "152": {"inputs": {"text": "a beautiful landscape, mountains at sunset, highly detailed"}, "class_type": "Text Prompt (JPS)"},
+      "173": {"inputs": {"Number": "1"}, "class_type": "Float"},
+      "179": {"inputs": {"model": ["96", 0]}, "class_type": "ModelPassThrough"},
+      "195": {"inputs": {"value": 1080}, "class_type": "PrimitiveInt"},
+      "196": {"inputs": {"value": 1920}, "class_type": "PrimitiveInt"},
+      "197": {"inputs": {"value": "a*b", "a": ["195", 0], "b": ["173", 0]}, "class_type": "SimpleMath+"},
+      "198": {"inputs": {"value": "a*b", "a": ["196", 0], "b": ["173", 0]}, "class_type": "SimpleMath+"},
+      "204": {"inputs": {"seed": 123456789, "steps": 12, "cfg": 1, "sampler_name": "er_sde", "scheduler": "simple", "denoise": 1, "model": ["179", 0], "positive": ["6", 0], "negative": ["7", 0], "latent_image": ["95", 0]}, "class_type": "KSampler"},
+      "205": {"inputs": {"filename_prefix": "ComfyUI", "images": ["8", 0]}, "class_type": "SaveImage"}
     }
   }
 }
