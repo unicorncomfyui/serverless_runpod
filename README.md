@@ -5,6 +5,8 @@
 Serverless worker for RunPod enabling ComfyUI workflow execution with multi-worker support and Qwen model integration.
 
 [![Docker Build](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml/badge.svg)](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml)
+[![Security Scan](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/security.yml/badge.svg)](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/security.yml)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 ## Table of Contents
 
