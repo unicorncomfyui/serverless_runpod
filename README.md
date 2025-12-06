@@ -345,8 +345,8 @@ docker push your-username/runpod-comfyui-qwen:latest
 
 3. **Configuration GPU**
    - **GPU Type** :
-     - Budget : RTX 4090 (~$0.40/heure)
-     - Performance : A100 40GB (~$1.10/heure)
+     - Recommandé : RTX 5090 (~$0.90/heure) - Architecture Blackwell (sm_120)
+     - Alternative : A100 40GB (~$1.10/heure)
    - **Active Workers** : 0 (auto-scaling)
    - **Max Workers** : 3-5 selon votre budget
    - **GPUs per Worker** : 1
@@ -533,11 +533,12 @@ Pour tester rapidement, utilisez le fichier exemple dans `/workflows/zimage_turb
 
 </details>
 
-**Note importante:** Le workflow doit contenir les modèles/LoRAs qui existent sur votre Network Volume. Les fichiers attendus sont:
+**Note importante:** Le workflow doit contenir les modèles qui existent sur votre Network Volume. Les fichiers attendus pour le workflow Z_Image_Turbo sont:
 - `z_image_turbo_bf16.safetensors` (model)
 - `ae.safetensors` (VAE)
 - `qwen_3_4b.safetensors` (CLIP)
-- Les LoRAs: `HMFemme_V1.safetensors`, `HearmemanAI_V4_Rank128_BreastsLoRA_Epoch80.safetensors`, etc.
+
+**À propos des LoRA :** Les LoRA (Low-Rank Adaptation) sont des fichiers de fine-tuning légers qui permettent d'ajuster un modèle de base pour des styles ou concepts spécifiques sans avoir à entraîner un modèle complet. Ils sont optionnels et peuvent être ajoutés au workflow si nécessaire dans `/runpod-volume/ComfyUI/models/loras/`.
 
 ### Format de réponse
 
@@ -765,10 +766,10 @@ docker exec -it comfyui-serverless-worker tail -f /workspace/logs/comfyui-server
 
 | Résolution | Steps | GPU | Temps estimé |
 |-----------|-------|-----|--------------|
-| 512x512 | 20 | RTX 4090 | ~5-8s |
-| 768x768 | 20 | RTX 4090 | ~10-15s |
-| 1024x1024 | 20 | RTX 4090 | ~20-30s |
-| 512x512 | 50 | RTX 4090 | ~15-20s |
+| 512x512 | 12 | RTX 5090 | ~3-5s |
+| 1080x1920 | 12 | RTX 5090 | ~10-12s |
+| 1024x1024 | 20 | RTX 5090 | ~15-20s |
+| 512x512 | 50 | RTX 5090 | ~10-15s |
 | 1024x1024 | 50 | A100 | ~25-35s |
 
 ### Optimisations recommandées
@@ -781,10 +782,11 @@ docker exec -it comfyui-serverless-worker tail -f /workspace/logs/comfyui-server
 
 ### Estimation des coûts
 
-**Exemple avec RTX 4090** (~$0.40/h) :
-- 1 image 512x512 : ~$0.001
-- 1 image 1024x1024 : ~$0.003
-- 100 images/jour : ~$0.20/jour = ~$6/mois
+**Exemple avec RTX 5090** (~$0.90/h = $0.00025/s) :
+- 1 image 512x512 (5s) : ~$0.00125
+- 1 image 1024x1024 (15s) : ~$0.00375
+- 1 image 1080x1920 (12s) : ~$0.003
+- 100 images 1080x1920/jour : ~$0.30/jour = ~$9/mois
 
 ## FAQ
 
