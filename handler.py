@@ -268,22 +268,35 @@ def get_output_images(history: Dict[str, Any]) -> List[str]:
     images = []
     outputs = history.get('outputs', {})
 
+    logger.info(f"History outputs structure: {list(outputs.keys())}")
+
     for node_id, output in outputs.items():
+        logger.info(f"Processing node {node_id}, output keys: {list(output.keys())}")
         if 'images' in output:
+            logger.info(f"Node {node_id} has {len(output['images'])} images")
             for image_info in output['images']:
                 filename = image_info.get('filename')
                 subfolder = image_info.get('subfolder', '')
+                logger.info(f"Image info: filename={filename}, subfolder={subfolder}")
 
                 if filename:
                     image_path = Path(f'/app/comfyui/output/{subfolder}/{filename}') if subfolder else Path(f'/app/comfyui/output/{filename}')
+                    logger.info(f"Looking for image at: {image_path}")
 
                     if image_path.exists():
+                        logger.info(f"Found image at {image_path}, size: {image_path.stat().st_size} bytes")
                         with open(image_path, 'rb') as img_file:
                             encoded = base64.b64encode(img_file.read()).decode('utf-8')
                             images.append(encoded)
 
                         # Clean up image file
                         image_path.unlink()
+                    else:
+                        logger.warning(f"Image not found at {image_path}")
+                        # List what's actually in the output directory
+                        output_dir = Path('/app/comfyui/output')
+                        if output_dir.exists():
+                            logger.info(f"Contents of {output_dir}: {list(output_dir.glob('**/*'))[:10]}")
 
     logger.info(f"Retrieved {len(images)} output images")
     return images
@@ -330,6 +343,7 @@ def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         if 'workflow' in job_input:
             # Custom workflow provided directly
             workflow = job_input['workflow']
+            workflow_type = 'custom'
             logger.info("Using custom workflow from input")
         else:
             # Load pre-defined workflow from file
