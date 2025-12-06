@@ -253,8 +253,16 @@ def poll_for_completion(prompt_id: str, timeout: int = TIMEOUT) -> Dict[str, Any
             history = response.json()
 
             if prompt_id in history:
+                job_history = history[prompt_id]
                 logger.info(f"Job {prompt_id} completed")
-                return history[prompt_id]
+                logger.info(f"History keys: {list(job_history.keys())}")
+                logger.info(f"Full history: {json.dumps(job_history, indent=2)[:1000]}")  # First 1000 chars
+
+                # Check for errors in the history
+                if 'status' in job_history:
+                    logger.info(f"Job status: {job_history['status']}")
+
+                return job_history
 
             time.sleep(2)
 
