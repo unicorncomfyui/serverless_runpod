@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  comfyui-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: runpod-comfyui-qwen:latest
+    container_name: comfyui-serverless-worker
+
+    env_file:
+      - .env
+
+    environment:
+      - COMFYUI_PORT=3000
+      - COMFYUI_HOST=http://127.0.0.1:3000
+      - TIMEOUT_SECONDS=600
+      - MIN_FREE_DISK_GB=0.5
+      - MIN_FREE_MEMORY_GB=1.0
+      - LOG_LEVEL=INFO
+
+    ports:
+      - "3000:3000"
+
+    volumes:
+      # Mount models directory for local development
+      - ./models:/app/comfyui/models
+      # Mount workflows for easy editing
+      - ./workflows:/app/workflows
+      # Mount output for debugging
+      - ./output:/app/comfyui/output
+      # Mount input for testing
+      - ./input:/app/comfyui/input
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+    # Keep container running for local testing
+    command: /bin/bash -c "cd /app/comfyui && python main.py --listen 0.0.0.0 --port 3000"
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Test runner service
+  test-runner:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: runpod-comfyui-qwen:latest
+    container_name: comfyui-test-runner
+
+    env_file:
+      - .env
+
+    volumes:
+      - ./tests:/app/tests
+      - ./handler.py:/app/handler.py
+
+    command: pytest /app/tests -v
+
+    profiles:
+      - test
+
+networks:
+  default:
+    name: comfyui-network
