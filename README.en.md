@@ -1,6 +1,6 @@
 # RunPod Serverless ComfyUI with Qwen
 
-**[Français](README.md)** | **English**
+**English** | **[Français](README.md)**
 
 Serverless worker for RunPod enabling ComfyUI workflow execution with multi-worker support and Qwen model integration.
 
