@@ -162,12 +162,66 @@ def inject_parameters(workflow: Dict[str, Any], params: Dict[str, Any]) -> Dict[
     return workflow
 
 
+def convert_ui_workflow_to_api(ui_workflow: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert ComfyUI UI workflow format to API format"""
+    # Check if already in API format (has numeric string keys with class_type)
+    if ui_workflow and all(isinstance(k, (int, str)) and isinstance(v, dict) and 'class_type' in v
+                           for k, v in list(ui_workflow.items())[:3] if k not in ['extra', 'version']):
+        logger.info("Workflow already in API format")
+        return ui_workflow
+
+    # UI format detected - convert to API format
+    if 'nodes' not in ui_workflow:
+        raise ValueError("Invalid workflow: missing 'nodes' array")
+
+    api_workflow = {}
+
+    for node in ui_workflow.get('nodes', []):
+        node_id = str(node['id'])
+
+        # Convert inputs from UI format to API format
+        api_inputs = {}
+
+        # Get widget values
+        if 'widgets_values' in node:
+            # Map widgets to their input names based on node type
+            for i, value in enumerate(node.get('widgets_values', [])):
+                # This is a simplified mapping - may need adjustment per node type
+                if i < len(node.get('inputs', [])):
+                    input_name = node['inputs'][i].get('name')
+                    if input_name:
+                        api_inputs[input_name] = value
+
+        # Get connections from inputs
+        for inp in node.get('inputs', []):
+            if 'link' in inp and inp['link'] is not None:
+                # Find the source node/output from links
+                link_id = inp['link']
+                for link in ui_workflow.get('links', []):
+                    if link[0] == link_id:
+                        source_node_id = str(link[1])
+                        source_output_index = link[2]
+                        api_inputs[inp['name']] = [source_node_id, source_output_index]
+                        break
+
+        api_workflow[node_id] = {
+            "class_type": node['type'],
+            "inputs": api_inputs
+        }
+
+    logger.info(f"Converted UI workflow to API format ({len(api_workflow)} nodes)")
+    return api_workflow
+
+
 def queue_prompt(workflow: Dict[str, Any]) -> str:
     """Queue a prompt to ComfyUI API and return the prompt_id"""
     try:
+        # Convert workflow if needed
+        api_workflow = convert_ui_workflow_to_api(workflow)
+
         response = requests.post(
             f"{BASE_URI}/prompt",
-            json={"prompt": workflow},
+            json={"prompt": api_workflow},
             timeout=TIMEOUT
         )
         response.raise_for_status()

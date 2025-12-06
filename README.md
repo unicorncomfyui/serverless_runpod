@@ -466,13 +466,14 @@ RunPod Serverless expose automatiquement ces endpoints :
 }
 ```
 
-#### Workflow custom
+#### Workflow custom (format API ComfyUI)
+
+Pour utiliser un workflow custom au format API ComfyUI:
 
 ```json
 {
   "input": {
-    "workflow_type": "custom",
-    "custom_workflow": {
+    "workflow": {
       "3": {
         "inputs": {
           "seed": 42,
@@ -486,6 +487,57 @@ RunPod Serverless expose automatiquement ces endpoints :
   }
 }
 ```
+
+#### Workflow custom (format UI ComfyUI)
+
+Vous pouvez également envoyer directement le JSON exporté de l'UI ComfyUI. Le handler convertira automatiquement au format API:
+
+```json
+{
+  "input": {
+    "workflow": {
+      "id": "workflow-id",
+      "nodes": [
+        {
+          "id": 1,
+          "type": "CheckpointLoaderSimple",
+          "widgets_values": ["model.safetensors"]
+        },
+        ...
+      ],
+      "links": [...],
+      "groups": [...]
+    }
+  }
+}
+```
+
+**Exemple complet prêt à l'emploi (Z_Image_Turbo):**
+
+Copiez-collez directement cet exemple dans l'UI RunPod ou via l'API:
+
+<details>
+<summary>Cliquez pour voir l'exemple complet JSON (workflow Qwen Z_Image_Turbo)</summary>
+
+```json
+{
+  "input": {
+    "workflow": VOTRE_WORKFLOW_ICI
+  }
+}
+```
+
+Remplacez `VOTRE_WORKFLOW_ICI` par le contenu du fichier `Z_Image_Turbo.json` fourni.
+
+Pour tester rapidement, utilisez le fichier exemple dans `/workflows/zimage_turbo.json` sur votre Network Volume.
+
+</details>
+
+**Note importante:** Le workflow doit contenir les modèles/LoRAs qui existent sur votre Network Volume. Les fichiers attendus sont:
+- `z_image_turbo_bf16.safetensors` (model)
+- `ae.safetensors` (VAE)
+- `qwen_3_4b.safetensors` (CLIP)
+- Les LoRAs: `HMFemme_V1.safetensors`, `HearmemanAI_V4_Rank128_BreastsLoRA_Epoch80.safetensors`, etc.
 
 ### Format de réponse
 
