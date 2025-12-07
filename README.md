@@ -30,7 +30,7 @@ Serverless worker for RunPod enabling ComfyUI workflow execution with multi-work
 
 ## Overview
 
-This project adapts the [comfyui-qwen-template](https://github.com/Hearmeman24/comfyui-qwen-template) for serverless use on RunPod. It enables deploying ComfyUI with Qwen models in an auto-scalable environment with automatic resource management.
+This project provides serverless endpoints for text-to-image and image-to-image generation using Qwen models and Z-Image Turbo on RunPod. It enables deploying ComfyUI workflows in an auto-scalable environment with automatic resource management and pay-per-use billing.
 
 ### Key differences from a classic Pod
 
