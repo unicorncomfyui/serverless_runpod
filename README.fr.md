@@ -2,6 +2,8 @@
 
 **[English](README.md)** | **Français**
 
+![Serverless RunPod - Qwen / Z-ImageTurbo](media/images/banner.png)
+
 Worker serverless pour RunPod permettant l'exécution de workflows ComfyUI avec support multi-worker et intégration de modèles Qwen.
 
 [![Docker Build](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml/badge.svg)](https://github.com/unicorncomfyui/serverless_runpod/actions/workflows/docker-build.yml)
