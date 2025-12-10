@@ -279,9 +279,10 @@ def poll_for_completion(prompt_id: str, timeout: int = TIMEOUT) -> Dict[str, Any
             time.sleep(2)
 
 
-def get_output_images(history: Dict[str, Any]) -> List[str]:
-    """Extract output images from history and encode as base64"""
+def get_output_files(history: Dict[str, Any]) -> Dict[str, List[str]]:
+    """Extract output images and videos from history and encode as base64"""
     images = []
+    videos = []
     outputs = history.get('outputs', {})
 
     logger.info(f"Using ComfyUI output directory: {COMFYUI_OUTPUT_DIR}")
@@ -289,6 +290,8 @@ def get_output_images(history: Dict[str, Any]) -> List[str]:
 
     for node_id, output in outputs.items():
         logger.info(f"Processing node {node_id}, output keys: {list(output.keys())}")
+
+        # Handle images
         if 'images' in output:
             logger.info(f"Node {node_id} has {len(output['images'])} images")
             for image_info in output['images']:
@@ -315,8 +318,34 @@ def get_output_images(history: Dict[str, Any]) -> List[str]:
                         if output_dir.exists():
                             logger.info(f"Contents of {output_dir}: {list(output_dir.glob('**/*'))[:10]}")
 
-    logger.info(f"Retrieved {len(images)} output images")
-    return images
+        # Handle videos (VHS_VideoCombine outputs)
+        if 'gifs' in output:
+            logger.info(f"Node {node_id} has {len(output['gifs'])} videos")
+            for video_info in output['gifs']:
+                filename = video_info.get('filename')
+                subfolder = video_info.get('subfolder', '')
+                logger.info(f"Video info: filename={filename}, subfolder={subfolder}")
+
+                if filename:
+                    video_path = Path(f'{COMFYUI_OUTPUT_DIR}/{subfolder}/{filename}') if subfolder else Path(f'{COMFYUI_OUTPUT_DIR}/{filename}')
+                    logger.info(f"Looking for video at: {video_path}")
+
+                    if video_path.exists():
+                        logger.info(f"Found video at {video_path}, size: {video_path.stat().st_size} bytes")
+                        with open(video_path, 'rb') as vid_file:
+                            encoded = base64.b64encode(vid_file.read()).decode('utf-8')
+                            videos.append(encoded)
+
+                        # Clean up video file
+                        video_path.unlink()
+                    else:
+                        logger.warning(f"Video not found at {video_path}")
+                        output_dir = Path(COMFYUI_OUTPUT_DIR)
+                        if output_dir.exists():
+                            logger.info(f"Contents of {output_dir}: {list(output_dir.glob('**/*'))[:10]}")
+
+    logger.info(f"Retrieved {len(images)} output images and {len(videos)} output videos")
+    return {'images': images, 'videos': videos}
 
 
 def cleanup_models():
@@ -375,15 +404,16 @@ def handler(event: Dict[str, Any]) -> Dict[str, Any]:
         # Wait for completion
         history = poll_for_completion(prompt_id)
 
-        # Get output images
-        images = get_output_images(history)
+        # Get output files (images and/or videos)
+        output_files = get_output_files(history)
 
         # Cleanup
         cleanup_models()
 
         # Return results
         return {
-            'images': images,
+            'images': output_files['images'],
+            'videos': output_files['videos'],
             'prompt_id': prompt_id,
             'workflow_type': workflow_type
         }
