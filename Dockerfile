@@ -1,5 +1,5 @@
 # Multi-stage build for RunPod Serverless ComfyUI with Qwen
-FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04 AS base
+FROM nvidia/cuda:13.0.0-cudnn-devel-ubuntu24.04 AS base
 
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
@@ -47,10 +47,15 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 # Upgrade pip and install build tools
 RUN python -m pip install --upgrade pip setuptools wheel
 
-# Install PyTorch nightly with RTX 5090 support (sm_120, CUDA 12.8)
+# Create symbolic links for pip (needed by ComfyUI custom nodes like Manager)
+RUN ln -sf /usr/local/bin/pip3.11 /usr/local/bin/pip && \
+    ln -sf /usr/local/bin/pip3.11 /usr/local/bin/pip3 && \
+    which pip && pip --version
+
+# Install PyTorch nightly with RTX 5090 support (sm_120, CUDA 13.0)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --pre torch torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/nightly/cu128 \
+    --index-url https://download.pytorch.org/whl/nightly/cu130 \
     && rm -rf /tmp/* /var/tmp/*
 
 # Install ComfyUI and its dependencies
