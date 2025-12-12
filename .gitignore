@@ -33,6 +33,23 @@ env/
 .env
 .env.local
 .env.*.local
+.env.production
+.env.staging
+.env.development
+
+# Secrets and credentials
+*.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+secrets.json
+credentials.json
+auth.json
+config.local.json
+.secrets
+*.secret
 
 # IDE
 .vscode/

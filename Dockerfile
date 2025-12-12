@@ -47,6 +47,11 @@ RUN curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
 # Upgrade pip and install build tools
 RUN python -m pip install --upgrade pip setuptools wheel
 
+# Create symbolic links for pip (needed by ComfyUI custom nodes like Manager)
+RUN ln -sf /usr/local/bin/pip3.11 /usr/local/bin/pip && \
+    ln -sf /usr/local/bin/pip3.11 /usr/local/bin/pip3 && \
+    which pip && pip --version
+
 # Install PyTorch nightly with RTX 5090 support (sm_120, CUDA 12.8)
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --pre torch torchvision torchaudio \

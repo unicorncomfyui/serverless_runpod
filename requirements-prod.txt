@@ -1,0 +1,19 @@
+# Production requirements with pinned versions for security and reproducibility
+# Generated: December 2025
+# Update regularly and run security scans before deploying
+
+# RunPod SDK
+runpod==1.5.1  # No known CVEs, using stable version
+
+# HTTP and API
+requests==2.32.3  # CVE-2024-35195 patched
+aiohttp==3.9.5    # CVE-2024-23334 patched, conservative minor version
+
+# Image processing
+Pillow==10.2.0    # CVE-2023-50447 patched
+
+# Utilities
+python-dotenv==1.0.1
+
+# Note: Testing dependencies (pytest) are excluded from production
+# Install from requirements.txt for development/testing

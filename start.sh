@@ -26,6 +26,19 @@ export HF_HOME="/workspace"
 if [ -f "/workspace/venv/bin/activate" ]; then
     echo "Activating virtual environment..."
     source /workspace/venv/bin/activate
+
+    # Ensure pip is accessible and check PyTorch version
+    echo "Checking PyTorch installation in venv..."
+    python -m pip install --upgrade pip --quiet
+
+    # Check if PyTorch needs CUDA 12.8 upgrade
+    TORCH_VERSION=$(python -c "import torch; print(torch.version.cuda if hasattr(torch.version, 'cuda') else 'none')" 2>/dev/null || echo "none")
+    if [[ "$TORCH_VERSION" != "12.8"* ]]; then
+        echo "Upgrading PyTorch to CUDA 12.8 in venv (current: $TORCH_VERSION)..."
+        python -m pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cu128 --upgrade
+    else
+        echo "PyTorch CUDA 12.8 already installed, skipping upgrade"
+    fi
 fi
 
 # Function to check if ComfyUI is ready

@@ -1,0 +1,72 @@
+# Gitleaks configuration for detecting secrets
+title = "Gitleaks Configuration"
+
+[[rules]]
+id = "runpod-api-key"
+description = "RunPod API Key"
+regex = '''(?i)(runpod[_-]?api[_-]?key|runpod[_-]?token)[\s]*[=:>]{1,3}[\s]*['\"]?([a-zA-Z0-9]{32,})'''
+tags = ["api-key", "runpod"]
+
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key"
+regex = '''(?i)(api[_-]?key|apikey)[\s]*[=:>]{1,3}[\s]*['\"]?([a-zA-Z0-9]{20,60})'''
+tags = ["api-key"]
+
+[[rules]]
+id = "docker-hub-token"
+description = "Docker Hub Access Token"
+regex = '''dckr_pat_[a-zA-Z0-9]{32,}'''
+tags = ["docker", "token"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key"
+regex = '''AKIA[0-9A-Z]{16}'''
+tags = ["aws", "access-key"]
+
+[[rules]]
+id = "aws-secret-key"
+description = "AWS Secret Key"
+regex = '''(?i)aws[_-]?secret[_-]?access[_-]?key[\s]*[=:>]{1,3}[\s]*['\"]?([a-zA-Z0-9/+=]{40})'''
+tags = ["aws", "secret-key"]
+
+[[rules]]
+id = "github-token"
+description = "GitHub Personal Access Token"
+regex = '''ghp_[a-zA-Z0-9]{36}'''
+tags = ["github", "token"]
+
+[[rules]]
+id = "github-oauth"
+description = "GitHub OAuth Token"
+regex = '''gho_[a-zA-Z0-9]{36}'''
+tags = ["github", "oauth"]
+
+[[rules]]
+id = "private-key"
+description = "Private Key"
+regex = '''-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'''
+tags = ["private-key"]
+
+[[rules]]
+id = "password-in-url"
+description = "Password in URL"
+regex = '''[a-zA-Z]{3,10}://[^/\s:@]{3,20}:[^/\s:@]{3,20}@.{1,100}'''
+tags = ["password", "url"]
+
+[allowlist]
+description = "Global allowlist"
+regexes = [
+  '''example\.com''',
+  '''YOUR_.*_HERE''',
+  '''\{\{.*\}\}''',  # Template variables
+  '''<.*>''',  # Placeholder brackets
+]
+
+paths = [
+  '''^\.env\.example$''',
+  '''^README\.md$''',
+  '''^README\.fr\.md$''',
+  '''^SECURITY\.md$''',
+]
