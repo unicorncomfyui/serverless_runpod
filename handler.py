@@ -318,10 +318,36 @@ def get_output_files(history: Dict[str, Any]) -> Dict[str, List[str]]:
                         if output_dir.exists():
                             logger.info(f"Contents of {output_dir}: {list(output_dir.glob('**/*'))[:10]}")
 
-        # Handle videos (VHS_VideoCombine outputs)
+        # Handle videos (VHS_VideoCombine outputs - 'gifs' key)
         if 'gifs' in output:
-            logger.info(f"Node {node_id} has {len(output['gifs'])} videos")
+            logger.info(f"Node {node_id} has {len(output['gifs'])} videos (gifs)")
             for video_info in output['gifs']:
+                filename = video_info.get('filename')
+                subfolder = video_info.get('subfolder', '')
+                logger.info(f"Video info: filename={filename}, subfolder={subfolder}")
+
+                if filename:
+                    video_path = Path(f'{COMFYUI_OUTPUT_DIR}/{subfolder}/{filename}') if subfolder else Path(f'{COMFYUI_OUTPUT_DIR}/{filename}')
+                    logger.info(f"Looking for video at: {video_path}")
+
+                    if video_path.exists():
+                        logger.info(f"Found video at {video_path}, size: {video_path.stat().st_size} bytes")
+                        with open(video_path, 'rb') as vid_file:
+                            encoded = base64.b64encode(vid_file.read()).decode('utf-8')
+                            videos.append(encoded)
+
+                        # Clean up video file
+                        video_path.unlink()
+                    else:
+                        logger.warning(f"Video not found at {video_path}")
+                        output_dir = Path(COMFYUI_OUTPUT_DIR)
+                        if output_dir.exists():
+                            logger.info(f"Contents of {output_dir}: {list(output_dir.glob('**/*'))[:10]}")
+
+        # Handle videos (SaveVideo outputs - 'videos' key)
+        if 'videos' in output:
+            logger.info(f"Node {node_id} has {len(output['videos'])} videos")
+            for video_info in output['videos']:
                 filename = video_info.get('filename')
                 subfolder = video_info.get('subfolder', '')
                 logger.info(f"Video info: filename={filename}, subfolder={subfolder}")
