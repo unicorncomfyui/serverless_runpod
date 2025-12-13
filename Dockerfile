@@ -4,6 +4,10 @@ FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04 AS base
 # Prevent interactive prompts during package installation
 ENV DEBIAN_FRONTEND=noninteractive
 
+# Remove Nsight Compute to fix CVE-2025-22871 (golang/stdlib 1.23.4 vulnerability)
+# Nsight Compute is a GPU profiling tool not needed for serverless inference
+RUN rm -rf /opt/nvidia/nsight-compute || true
+
 # Python and pip configuration
 ENV PYTHONUNBUFFERED=1 \
     PIP_PREFER_BINARY=1 \
@@ -59,8 +63,11 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     && rm -rf /tmp/* /var/tmp/*
 
 # Install ComfyUI and its dependencies
+# Pinned to commit from working production build (2025-12-10)
+# To update ComfyUI version, change commit hash and rebuild
 RUN git clone https://github.com/comfyanonymous/ComfyUI.git /app/comfyui && \
     cd /app/comfyui && \
+    git checkout 36357bbcc3c515e37a742457a2b2ab4b7ccc17a8 && \
     pip install -r requirements.txt \
     && rm -rf /tmp/* /var/tmp/*
 
