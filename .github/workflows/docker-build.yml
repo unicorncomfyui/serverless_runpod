@@ -87,6 +87,18 @@ jobs:
       - name: Image digest
         run: echo "Image pushed with digest ${{ steps.build.outputs.digest }}"
 
+      - name: Clean up Docker space before scan
+        run: |
+          echo "Disk space before cleanup:"
+          df -h
+
+          # Remove build cache and dangling images
+          docker buildx prune -af
+          docker system prune -af --volumes
+
+          echo "Disk space after cleanup:"
+          df -h
+
       - name: Docker Scout scan
         uses: docker/scout-action@v1
         with:
