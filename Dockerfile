@@ -90,6 +90,10 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 RUN pip install opencv-python \
     && rm -rf /tmp/* /var/tmp/*
 
+# Install SageAttention for model optimization (used in t2v workflow)
+RUN pip install sageattention==1.0.6 \
+    && rm -rf /tmp/* /var/tmp/*
+
 # Install ComfyUI custom nodes - Batch 1 (lightweight)
 RUN cd /app/comfyui/custom_nodes && \
     git clone --depth 1 https://github.com/theUpsider/ComfyUI-Logic.git && \
