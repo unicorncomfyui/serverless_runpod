@@ -108,6 +108,7 @@ RUN cd /app/comfyui/custom_nodes && \
     git clone --depth 1 https://github.com/cubiq/ComfyUI_essentials.git && \
     git clone --depth 1 https://github.com/Jonseed/ComfyUI-Detail-Daemon.git && \
     git clone --depth 1 https://github.com/bash-j/mikey_nodes.git && \
+    git clone --depth 1 https://github.com/Fannovel16/ComfyUI-Frame-Interpolation.git && \
     rm -rf /tmp/* /var/tmp/*
 
 # Install ComfyUI custom nodes - Batch 3 (heavy, without models download)
