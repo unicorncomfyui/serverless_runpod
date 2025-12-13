@@ -156,6 +156,7 @@ COPY handler.py /app/
 COPY start.sh /app/
 COPY workflows/ /app/workflows/
 COPY schemas/ /app/schemas/
+COPY extra_model_paths.yaml /app/comfyui/
 
 # Create necessary directories with proper permissions
 RUN mkdir -p \
