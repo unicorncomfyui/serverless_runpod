@@ -71,12 +71,14 @@ wait_for_comfyui() {
 }
 
 # Determine ComfyUI location
-if [ -d "/workspace/ComfyUI" ]; then
-    COMFYUI_DIR="/workspace/ComfyUI"
-    echo "Using ComfyUI from Network Volume: $COMFYUI_DIR"
-elif [ -d "/app/comfyui" ]; then
+# IMPORTANT: Prioritize container ComfyUI (pinned version) over network volume
+if [ -d "/app/comfyui" ]; then
     COMFYUI_DIR="/app/comfyui"
-    echo "Using ComfyUI from container: $COMFYUI_DIR"
+    echo "Using ComfyUI from container (pinned version): $COMFYUI_DIR"
+elif [ -d "/workspace/ComfyUI" ]; then
+    COMFYUI_DIR="/workspace/ComfyUI"
+    echo "WARNING: Using ComfyUI from Network Volume: $COMFYUI_DIR"
+    echo "This may be outdated. Consider removing /workspace/ComfyUI to use container version."
 else
     echo "ERROR: ComfyUI not found in /workspace/ComfyUI or /app/comfyui"
     exit 1
