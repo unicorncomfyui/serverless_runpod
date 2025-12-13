@@ -19,11 +19,12 @@ TIMEOUT = int(os.environ.get('TIMEOUT_SECONDS', 600))
 DISK_MIN_FREE_BYTES = int(float(os.environ.get('MIN_FREE_DISK_GB', 0.5)) * 1024 * 1024 * 1024)
 MEMORY_MIN_FREE_BYTES = int(float(os.environ.get('MIN_FREE_MEMORY_GB', 1.0)) * 1024 * 1024 * 1024)
 
-# Detect ComfyUI directory (same logic as start.sh)
-if os.path.exists('/workspace/ComfyUI'):
-    COMFYUI_OUTPUT_DIR = '/workspace/ComfyUI/output'
-elif os.path.exists('/app/comfyui'):
+# Detect ComfyUI directory (same priority as start.sh)
+# IMPORTANT: Prioritize container ComfyUI (pinned version) over network volume
+if os.path.exists('/app/comfyui'):
     COMFYUI_OUTPUT_DIR = '/app/comfyui/output'
+elif os.path.exists('/workspace/ComfyUI'):
+    COMFYUI_OUTPUT_DIR = '/workspace/ComfyUI/output'
 else:
     COMFYUI_OUTPUT_DIR = '/app/comfyui/output'  # fallback
 
