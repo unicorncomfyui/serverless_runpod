@@ -28,6 +28,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     wget \
     curl \
+    aria2 \
     libgl1 \
     libglib2.0-0 \
     libsm6 \
@@ -39,6 +40,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     libffi-dev \
     pkg-config \
+    libtcmalloc-minimal4 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
@@ -90,9 +92,8 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 RUN pip install opencv-python \
     && rm -rf /tmp/* /var/tmp/*
 
-# Install SageAttention for model optimization (used in t2v workflow)
-RUN pip install sageattention==1.0.6 \
-    && rm -rf /tmp/* /var/tmp/*
+# NOTE: SageAttention will be compiled from source at runtime in init.sh
+# This ensures GPU-optimized compilation with the correct CUDA architecture
 
 # Install ComfyUI custom nodes - Batch 1 (lightweight)
 RUN cd /app/comfyui/custom_nodes && \
@@ -160,6 +161,7 @@ RUN python -m pip install --no-cache-dir -r /app/requirements.txt \
 
 COPY handler.py /app/
 COPY start.sh /app/
+COPY init.sh /app/
 COPY workflows/ /app/workflows/
 COPY schemas/ /app/schemas/
 COPY extra_model_paths.yaml /app/comfyui/
@@ -176,8 +178,8 @@ RUN mkdir -p \
     /app/comfyui/temp && \
     chmod -R 777 /app/comfyui/output /app/comfyui/input /app/comfyui/temp
 
-# Make start script executable
-RUN chmod +x /app/start.sh
+# Make scripts executable
+RUN chmod +x /app/start.sh /app/init.sh
 
 # Expose ComfyUI port
 EXPOSE 3000

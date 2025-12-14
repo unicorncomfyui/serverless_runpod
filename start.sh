@@ -22,6 +22,14 @@ fi
 export PYTHONUNBUFFERED=true
 export HF_HOME="/workspace"
 
+# Run initialization script (SageAttention build, Triton cache cleanup)
+echo "Running initialization script..."
+if [ -f "/app/init.sh" ]; then
+    bash /app/init.sh
+else
+    echo "WARNING: init.sh not found, skipping initialization"
+fi
+
 # Activate virtual environment if it exists
 if [ -f "/workspace/venv/bin/activate" ]; then
     echo "Activating virtual environment..."
@@ -105,7 +113,11 @@ if [ ! -f "$COMFYUI_DIR/main.py" ]; then
 fi
 
 cd "$COMFYUI_DIR"
-python main.py --listen 0.0.0.0 --port 3000 --temp-directory /tmp $GPU_ARGS > /workspace/logs/comfyui-serverless.log 2>&1 &
+
+# Enable tcmalloc for better memory management
+export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libtcmalloc_minimal.so.4
+
+python main.py --listen 0.0.0.0 --port 3000 --temp-directory /tmp --use-sage-attention $GPU_ARGS > /workspace/logs/comfyui-serverless.log 2>&1 &
 COMFYUI_PID=$!
 
 echo "ComfyUI started with PID: $COMFYUI_PID"

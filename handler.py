@@ -376,13 +376,18 @@ def get_output_files(history: Dict[str, Any]) -> Dict[str, List[str]]:
 
 
 def cleanup_models():
-    """Unload models to free memory"""
+    """Soft cleanup to free unused VRAM without unloading models
+
+    This keeps models loaded between requests for stability and performance.
+    Following comfyui-wan approach: models persist, only cache is cleared.
+    """
     try:
-        response = requests.post(f"{BASE_URI}/free", json={"unload_models": True}, timeout=30)
+        # Soft cache clearing instead of full model unload
+        response = requests.post(f"{BASE_URI}/free", json={"unload_models": False}, timeout=30)
         response.raise_for_status()
-        logger.info("Models unloaded successfully")
+        logger.info("Soft cache cleanup completed (models kept loaded)")
     except Exception as e:
-        logger.warning(f"Error unloading models: {e}")
+        logger.warning(f"Error during soft cleanup: {e}")
 
 
 def handler(event: Dict[str, Any]) -> Dict[str, Any]:
