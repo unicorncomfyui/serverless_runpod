@@ -376,18 +376,57 @@ def get_output_files(history: Dict[str, Any]) -> Dict[str, List[str]]:
 
 
 def cleanup_models():
-    """Soft cleanup to free unused VRAM without unloading models
+    """Adaptive cleanup to balance performance and memory safety
 
-    This keeps models loaded between requests for stability and performance.
-    Following comfyui-wan approach: models persist, only cache is cleared.
+    Strategy (3 levels):
+    1. Normal (memory > 2GB): free_memory only (keep models, clear cache/activations)
+    2. Low memory (< 2GB): unload small models (CLIP/VAE), keep UNET
+    3. Critical (< 1GB): full unload (emergency)
+
+    This keeps the heavy UNET (14B, slow to load) while clearing fast-loading parts.
     """
     try:
-        # Soft cache clearing instead of full model unload
-        response = requests.post(f"{BASE_URI}/free", json={"unload_models": False}, timeout=30)
+        # Check current memory to decide cleanup strategy
+        memory_info = get_container_memory_info()
+        memory_available_gb = memory_info['available'] / (1024**3)
+
+        # Adaptive cleanup based on memory pressure
+        if memory_available_gb >= 2.0:
+            # Normal: Clear activations/cache, keep all models
+            cleanup_params = {"free_memory": True, "unload_models": False}
+            cleanup_type = "SOFT"
+            logger.info(f"Cleanup: SOFT (free cache, keep models) - {memory_available_gb:.2f}GB available")
+
+        elif memory_available_gb >= 1.0:
+            # Low memory: Free memory + unload small models
+            cleanup_params = {"free_memory": True, "unload_models": True}
+            cleanup_type = "MEDIUM"
+            logger.info(f"Cleanup: MEDIUM (unload small models) - {memory_available_gb:.2f}GB available")
+
+        else:
+            # Critical: Full cleanup
+            cleanup_params = {"free_memory": True, "unload_models": True}
+            cleanup_type = "HARD"
+            logger.warning(f"Cleanup: HARD (full unload) - CRITICAL MEMORY: {memory_available_gb:.2f}GB")
+
+        # Execute cleanup via ComfyUI API
+        response = requests.post(f"{BASE_URI}/free", json=cleanup_params, timeout=30)
         response.raise_for_status()
-        logger.info("Soft cache cleanup completed (models kept loaded)")
+
+        # Also clear CUDA cache to release fragmented memory
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.synchronize()
+                logger.info("CUDA cache cleared")
+        except Exception as cuda_err:
+            logger.warning(f"Could not clear CUDA cache: {cuda_err}")
+
+        logger.info(f"Cleanup completed: {cleanup_type}")
+
     except Exception as e:
-        logger.warning(f"Error during soft cleanup: {e}")
+        logger.warning(f"Error during cleanup: {e}")
 
 
 def handler(event: Dict[str, Any]) -> Dict[str, Any]:
