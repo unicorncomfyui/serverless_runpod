@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     curl \
     aria2 \
+    ninja-build \
     libgl1 \
     libglib2.0-0 \
     libsm6 \

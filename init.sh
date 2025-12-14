@@ -39,14 +39,26 @@ else
     pip install -e . > /tmp/sage_build.log 2>&1
 
     if [ $? -eq 0 ]; then
-        echo "✓ SageAttention built and installed successfully"
+        echo "✓ SageAttention compilation completed"
         # Clean up build artifacts
         cd /
         rm -rf /tmp/SageAttention
+
+        # Verify installation
+        if python -c "import sageattention; print(f'SageAttention version: {sageattention.__version__}')" 2>/dev/null; then
+            echo "✓ SageAttention verified and ready"
+        else
+            echo "❌ CRITICAL: SageAttention built but not importable!"
+            echo "This should not happen. Check Python environment."
+            exit 1
+        fi
     else
-        echo "⚠ SageAttention build failed, check /tmp/sage_build.log"
-        echo "Falling back to runtime without SageAttention"
+        echo "❌ CRITICAL: SageAttention build failed!"
+        echo "Build log:"
         cat /tmp/sage_build.log
+        echo ""
+        echo "This is required for t2v workflows. Exiting."
+        exit 1
     fi
 fi
 
