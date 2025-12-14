@@ -63,8 +63,8 @@ compile_sageattention() {
     fi
 
     echo "Installing SageAttention package..."
-    # Step 2: Install package (editable mode, extensions already compiled)
-    pip install --no-build-isolation --no-deps -e . >> /tmp/sage_build.log 2>&1
+    # Step 2: Install package (normal install, extensions already compiled)
+    pip install --no-build-isolation --no-deps . >> /tmp/sage_build.log 2>&1
 
     if [ $? -eq 0 ]; then
         if python -c "import sageattention; print(f'SageAttention {sageattention.__version__} compiled')" 2>/dev/null; then
@@ -111,8 +111,8 @@ else
             echo "Installing from cache (~10 seconds)..."
 
             cd "$SAGE_CACHE_DIR/SageAttention"
-            # Extensions already compiled and cached, just install package
-            pip install --no-build-isolation --no-deps -e . > /tmp/sage_cache_install.log 2>&1
+            # Extensions already compiled and cached, install package (normal install, not editable)
+            pip install --no-build-isolation --no-deps . > /tmp/sage_cache_install.log 2>&1
 
             if python -c "import sageattention; print(f'SageAttention {sageattention.__version__} from cache')" 2>/dev/null; then
                 echo "✓ SageAttention restored from cache successfully"
