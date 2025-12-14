@@ -51,7 +51,7 @@ Ce projet met à disposition des endpoints serverless pour la génération text-
 - **Gestion des ressources** : Vérification automatique mémoire/disque avant chaque job
 - **Nettoyage adaptatif** : Système intelligent 3 niveaux prévenant l'OOM sur générations consécutives
 - **Cache SageAttention** : Mise en cache sur Network Volume réduit le cold start de 2-3min à ~10s
-- **Performances optimisées** : tcmalloc, optimisations CUDA 12.8, équivalent à comfyui-wan
+- **Performances optimisées** : tcmalloc, optimisations CUDA 12.8 pour efficacité maximale
 - **Workflows flexibles** : txt2img, img2img, et workflows personnalisés
 
 ### Stack technique
@@ -840,20 +840,6 @@ Cela prévient l'erreur "Insufficient memory. Available: 0.18GB" sur les génér
 4. **Steps optimaux** : 20-28 steps suffisent généralement
 5. **Idle timeout court** : 30s pour réduire les coûts
 6. **Gestion mémoire** : Le nettoyage adaptatif gère la mémoire automatiquement
-
-### Comparaison de performance avec comfyui-wan
-
-Ce projet égale ou dépasse l'implémentation de référence [comfyui-wan](https://github.com/Hearmeman24/comfyui-wan) :
-
-| Composant | comfyui-wan | Ce projet | Statut |
-|-----------|-------------|-----------|--------|
-| CUDA | 12.8.1-cudnn | 12.8.1-cudnn | ✅ Identique |
-| PyTorch | nightly cu128 | nightly cu128 | ✅ Identique |
-| SageAttention | commit 68de379 | commit 68de379 | ✅ Identique |
-| Flags de build | EXT_PARALLEL=4 | EXT_PARALLEL=4 | ✅ Identique |
-| tcmalloc | LD_PRELOAD | LD_PRELOAD | ✅ Identique |
-| Système de cache | Aucun | Network Volume | 🚀 Meilleur (10s vs 3min) |
-| Méthode install | Editable | Normal | 🚀 Meilleur (corrige bug import) |
 
 ### Estimation des coûts
 

@@ -53,7 +53,7 @@ This project provides serverless endpoints for text-to-image and image-to-image 
 - **Resource management**: Automatic memory/disk verification before each job
 - **Adaptive memory cleanup**: 3-level intelligent cleanup preventing OOM on consecutive generations
 - **SageAttention caching**: Network volume caching reduces cold start from 2-3min to ~10s
-- **Optimized performance**: tcmalloc, CUDA 12.8 optimizations, matching comfyui-wan reference
+- **Optimized performance**: tcmalloc, CUDA 12.8 optimizations for maximum efficiency
 - **Flexible workflows**: txt2img, img2img, and custom workflows
 
 ### Technical Stack
@@ -574,20 +574,6 @@ This prevents the "Insufficient memory. Available: 0.18GB" error on consecutive 
 4. **Optimal steps**: 20-28 steps are usually sufficient
 5. **Short idle timeout**: 30s to reduce costs
 6. **Memory management**: The adaptive cleanup handles memory automatically
-
-### Performance Comparison with comfyui-wan
-
-This project matches or exceeds the [comfyui-wan](https://github.com/Hearmeman24/comfyui-wan) reference implementation:
-
-| Component | comfyui-wan | This Project | Status |
-|-----------|-------------|--------------|--------|
-| CUDA | 12.8.1-cudnn | 12.8.1-cudnn | ✅ Identical |
-| PyTorch | nightly cu128 | nightly cu128 | ✅ Identical |
-| SageAttention | commit 68de379 | commit 68de379 | ✅ Identical |
-| Build flags | EXT_PARALLEL=4 | EXT_PARALLEL=4 | ✅ Identical |
-| tcmalloc | LD_PRELOAD | LD_PRELOAD | ✅ Identical |
-| Cache system | None | Network Volume | 🚀 Better (10s vs 3min) |
-| Install method | Editable | Normal | 🚀 Better (fixes import bug) |
 
 ### Cost Estimation
 
