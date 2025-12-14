@@ -25,7 +25,12 @@ export HF_HOME="/workspace"
 # Run initialization script (SageAttention build, Triton cache cleanup)
 echo "Running initialization script..."
 if [ -f "/app/init.sh" ]; then
-    bash /app/init.sh
+    if ! bash /app/init.sh; then
+        echo "❌ CRITICAL: Initialization failed!"
+        echo "Cannot start ComfyUI without SageAttention."
+        echo "Check logs above for details."
+        exit 1
+    fi
 else
     echo "WARNING: init.sh not found, skipping initialization"
 fi
