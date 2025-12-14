@@ -190,7 +190,7 @@ ENV PYTHONUNBUFFERED=1
 ENV COMFYUI_PORT=3000
 ENV CUDA_HOME=/usr/local/cuda
 ENV PATH="${CUDA_HOME}/bin:${PATH}"
-ENV LD_LIBRARY_PATH="${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
+ENV LD_LIBRARY_PATH="/usr/lib/x86_64-linux-gnu:${CUDA_HOME}/lib64:${LD_LIBRARY_PATH}"
 
 # Health check - Disabled temporarily for debugging
 # HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
