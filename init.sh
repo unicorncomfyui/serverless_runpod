@@ -23,6 +23,24 @@ compile_sageattention() {
     echo "Building SageAttention from source (commit $SAGE_COMMIT)..."
     echo "This will take 2-3 minutes..."
 
+    # Pre-flight check: Verify PyTorch can access CUDA
+    echo "Pre-flight check: Verifying PyTorch CUDA access..."
+    if ! python -c "import torch; assert torch.cuda.is_available(), 'CUDA not available'; print(f'  ✓ PyTorch {torch.__version__}, CUDA {torch.version.cuda}, GPU: {torch.cuda.get_device_name(0)}')" 2>&1; then
+        echo ""
+        echo "❌ CRITICAL: PyTorch cannot access CUDA!"
+        echo "SageAttention setup.py requires torch.cuda to be available."
+        echo ""
+        echo "Debug info:"
+        echo "  LD_LIBRARY_PATH: $LD_LIBRARY_PATH"
+        echo "  CUDA_HOME: $CUDA_HOME"
+        echo ""
+        python -c "import torch; print(f'  PyTorch version: {torch.__version__}'); print(f'  CUDA available: {torch.cuda.is_available()}')" 2>&1 || echo "  Failed to import torch"
+        echo ""
+        return 1
+    fi
+    echo "  PyTorch CUDA check passed ✓"
+    echo ""
+
     cd /tmp
     rm -rf SageAttention || true
 
@@ -36,7 +54,8 @@ compile_sageattention() {
     export MAX_JOBS=32
 
     echo "Compiling SageAttention..."
-    pip install -e . > /tmp/sage_build.log 2>&1
+    # Use --no-build-isolation to ensure build inherits environment variables (especially LD_LIBRARY_PATH)
+    pip install --no-build-isolation -e . > /tmp/sage_build.log 2>&1
 
     if [ $? -eq 0 ]; then
         if python -c "import sageattention; print(f'SageAttention {sageattention.__version__} compiled')" 2>/dev/null; then
@@ -83,7 +102,8 @@ else
             echo "Installing from cache (~10 seconds)..."
 
             cd "$SAGE_CACHE_DIR/SageAttention"
-            pip install -e . > /tmp/sage_cache_install.log 2>&1
+            # Use --no-build-isolation to inherit LD_LIBRARY_PATH
+            pip install --no-build-isolation -e . > /tmp/sage_cache_install.log 2>&1
 
             if python -c "import sageattention; print(f'SageAttention {sageattention.__version__} from cache')" 2>/dev/null; then
                 echo "✓ SageAttention restored from cache successfully"
