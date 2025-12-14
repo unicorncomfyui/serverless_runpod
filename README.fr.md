@@ -49,15 +49,19 @@ Ce projet met à disposition des endpoints serverless pour la génération text-
 - **Network Volume** : Support complet des volumes réseau RunPod avec symlink automatique
 - **21 Custom Nodes** : Ensemble complet de nodes ComfyUI pré-installés
 - **Gestion des ressources** : Vérification automatique mémoire/disque avant chaque job
-- **Nettoyage automatique** : Libération des modèles et nettoyage après traitement
+- **Nettoyage adaptatif** : Système intelligent 3 niveaux prévenant l'OOM sur générations consécutives
+- **Cache SageAttention** : Mise en cache sur Network Volume réduit le cold start de 2-3min à ~10s
+- **Performances optimisées** : tcmalloc, optimisations CUDA 12.8, équivalent à comfyui-wan
 - **Workflows flexibles** : txt2img, img2img, et workflows personnalisés
 
 ### Stack technique
 
 - **Base** : CUDA 12.8.1 + cuDNN + Ubuntu 24.04
 - **Python** : 3.11 (via deadsnakes PPA)
-- **PyTorch** : Version stable compatible CUDA 12.x
-- **ComfyUI** : Dernière version depuis GitHub
+- **PyTorch** : Nightly builds avec support CUDA 12.8 (RTX 5090 sm_120)
+- **ComfyUI** : Version épinglée depuis GitHub (commit 36357bb)
+- **SageAttention** : Attention quantifiée INT8/FP16 (commit 68de379) avec cache sur volume réseau
+- **Optimisation mémoire** : tcmalloc pour gestion efficace de la mémoire
 - **RunPod SDK** : Pour l'intégration serverless
 
 ## Architecture
@@ -66,8 +70,9 @@ Ce projet met à disposition des endpoints serverless pour la génération text-
 
 ```
 serverless_runpod/
-├── 📄 handler.py                  # Handler RunPod serverless principal
+├── 📄 handler.py                  # Handler RunPod serverless avec nettoyage adaptatif
 ├── 🚀 start.sh                    # Script de démarrage avec gestion Network Volume
+├── 🔧 init.sh                     # Initialisation : build SageAttention + cache
 ├── 🐳 Dockerfile                  # Image Docker CUDA 12.8.1 + Python 3.11
 ├── 🔧 docker-compose.yml          # Configuration pour tests locaux
 ├── 📦 requirements.txt            # Dépendances Python (RunPod SDK, etc.)
@@ -101,17 +106,22 @@ graph LR
     B --> C{Network Volume?}
     C -->|Oui| D[Symlink /workspace]
     C -->|Non| E[Use Container ComfyUI]
-    D --> F[Start ComfyUI]
+    D --> F[Exécuter init.sh]
     E --> F
-    F --> G[Validate Resources]
-    G --> H[Load Workflow]
-    H --> I[Inject Parameters]
-    I --> J[Queue to ComfyUI]
-    J --> K[Poll for Completion]
-    K --> L[Get Output Images]
-    L --> M[Base64 Encode]
-    M --> N[Cleanup Models]
-    N --> O[Return Response]
+    F --> G{Cache SageAttention?}
+    G -->|Valide| H[Restaurer depuis cache ~10s]
+    G -->|Absent/Obsolète| I[Compiler depuis source ~2-3min]
+    H --> J[Démarrer ComfyUI]
+    I --> J
+    J --> K[Valider ressources]
+    K --> L[Charger workflow]
+    L --> M[Injecter paramètres]
+    M --> N[Envoyer à ComfyUI]
+    N --> O[Attendre complétion]
+    O --> P[Récupérer images]
+    P --> Q[Encoder Base64]
+    Q --> R[Nettoyage adaptatif]
+    R --> S[Retourner réponse]
 ```
 
 ## Prérequis
@@ -258,6 +268,10 @@ LOG_LEVEL=INFO
 │   ├── custom_nodes/           # Nodes personnalisés (optionnel)
 │   ├── output/                 # Images générées
 │   └── input/                  # Images source
+├── sageattention_cache/        # Cache du build compilé SageAttention
+│   ├── SageAttention/          # Répertoire du build mis en cache
+│   └── .commit_hash            # Hash de commit pour validation du cache
+├── text_embed_cache/           # Cache de l'encodeur de texte
 ├── venv/                       # Environnement virtuel Python (optionnel)
 │   └── bin/activate
 └── logs/                       # Logs persistants
@@ -774,6 +788,19 @@ docker exec -it comfyui-serverless-worker tail -f /workspace/logs/comfyui-server
 
 ## Performances et Optimisation
 
+### Performance au démarrage
+
+**Temps de démarrage à froid :**
+- **Avec cache SageAttention** (Network Volume) : ~10-15 secondes
+- **Sans cache** (premier démarrage) : ~2-3 minutes (compilation SageAttention)
+- **Validation du cache** : Vérification automatique du hash de commit garantit l'intégrité
+
+Le système de cache SageAttention améliore drastiquement les performances de cold start :
+- Compile les extensions CUDA SageAttention une seule fois
+- Stocke les fichiers `.so` compilés sur le Network Volume dans `/workspace/sageattention_cache`
+- Valide l'intégrité du cache via hash de commit (68de379)
+- Recompile automatiquement si le cache est corrompu ou obsolète
+
 ### Temps de traitement moyens
 
 | Résolution | Steps | GPU | Temps estimé |
@@ -784,13 +811,49 @@ docker exec -it comfyui-serverless-worker tail -f /workspace/logs/comfyui-server
 | 512x512 | 50 | RTX 5090 | ~10-15s |
 | 1024x1024 | 50 | A100 | ~25-35s |
 
+### Nettoyage adaptatif de la mémoire
+
+Le handler implémente une stratégie de nettoyage adaptative à 3 niveaux pour prévenir l'OOM sur les générations consécutives :
+
+**Niveau 1 - Normal** (Mémoire > 2GB) :
+- `free_memory=True, unload_models=False`
+- Nettoie le cache CUDA et les activations
+- Garde tous les modèles en VRAM pour performance maximale
+
+**Niveau 2 - Moyen** (1GB < Mémoire < 2GB) :
+- `free_memory=True, unload_models=True`
+- Décharge les modèles à chargement rapide (CLIP/VAE rechargement ~10s)
+- Conserve l'UNET lourd (14B params, lent à charger) en VRAM quand possible
+
+**Niveau 3 - Critique** (Mémoire < 1GB) :
+- `free_memory=True, unload_models=True`
+- Déchargement complet des modèles pour éviter l'OOM
+- Mode de nettoyage d'urgence
+
+Cela prévient l'erreur "Insufficient memory. Available: 0.18GB" sur les générations consécutives tout en maximisant les performances.
+
 ### Optimisations recommandées
 
-1. **Utiliser le Network Volume** : Évite le téléchargement des modèles
+1. **Utiliser le Network Volume** : Évite le téléchargement des modèles ET active le cache SageAttention
 2. **Batch processing** : Grouper plusieurs images dans une requête
 3. **Sampler rapide** : `euler` ou `euler_a` au lieu de `dpm++`
 4. **Steps optimaux** : 20-28 steps suffisent généralement
 5. **Idle timeout court** : 30s pour réduire les coûts
+6. **Gestion mémoire** : Le nettoyage adaptatif gère la mémoire automatiquement
+
+### Comparaison de performance avec comfyui-wan
+
+Ce projet égale ou dépasse l'implémentation de référence [comfyui-wan](https://github.com/Hearmeman24/comfyui-wan) :
+
+| Composant | comfyui-wan | Ce projet | Statut |
+|-----------|-------------|-----------|--------|
+| CUDA | 12.8.1-cudnn | 12.8.1-cudnn | ✅ Identique |
+| PyTorch | nightly cu128 | nightly cu128 | ✅ Identique |
+| SageAttention | commit 68de379 | commit 68de379 | ✅ Identique |
+| Flags de build | EXT_PARALLEL=4 | EXT_PARALLEL=4 | ✅ Identique |
+| tcmalloc | LD_PRELOAD | LD_PRELOAD | ✅ Identique |
+| Système de cache | Aucun | Network Volume | 🚀 Meilleur (10s vs 3min) |
+| Méthode install | Editable | Normal | 🚀 Meilleur (corrige bug import) |
 
 ### Estimation des coûts
 
@@ -799,6 +862,111 @@ docker exec -it comfyui-serverless-worker tail -f /workspace/logs/comfyui-server
 - 1 image 1024x1024 (15s) : ~$0.00375
 - 1 image 1080x1920 (12s) : ~$0.003
 - 100 images 1080x1920/jour : ~$0.30/jour = ~$9/mois
+
+## Troubleshooting
+
+### Problèmes courants
+
+#### 1. Générations consécutives échouent avec OOM
+
+**Symptômes** : La première génération fonctionne, la seconde échoue avec "Insufficient memory. Available: 0.18GB"
+
+**Cause** : Les modèles restent en VRAM après la première génération
+
+**Solution** : Le système de nettoyage adaptatif gère cela automatiquement. Si vous rencontrez encore des problèmes :
+```bash
+# Vérifier les paramètres mémoire dans handler.py (devrait être automatique)
+# Seuils des niveaux :
+# - Normal : > 2GB (garde tous les modèles)
+# - Moyen : 1-2GB (décharge CLIP/VAE, garde UNET)
+# - Critique : < 1GB (déchargement complet)
+
+# Vérifier que le nettoyage fonctionne via les logs :
+docker-compose logs -f | grep "Cleanup:"
+```
+
+#### 2. CUDA out of memory
+
+**Symptômes** : Le job échoue avec erreur OOM dès la première génération
+
+**Solutions** :
+```bash
+# Réduire la résolution
+"width": 512, "height": 512  # Au lieu de 1024x1024
+
+# Réduire batch_size dans le workflow
+"batch_size": 1
+
+# Utiliser un GPU avec plus de VRAM
+# RTX 5090 (24GB) ou A100 (40GB)
+```
+
+#### 3. Échec de compilation SageAttention
+
+**Symptômes** : Le conteneur ne démarre pas, les logs montrent "SageAttention build failed"
+
+**Solutions** :
+```bash
+# Vérifier l'accès CUDA de PyTorch
+python -c "import torch; print(torch.cuda.is_available())"
+
+# Vérifier que LD_LIBRARY_PATH inclut les libs CUDA système
+echo $LD_LIBRARY_PATH
+# Doit contenir : /usr/lib/x86_64-linux-gnu
+
+# Nettoyer le cache corrompu et recompiler
+rm -rf /workspace/sageattention_cache
+# Le conteneur recompilera au prochain démarrage
+
+# Consulter les logs de build
+cat /tmp/sage_build.log
+```
+
+#### 4. ComfyUI ne démarre pas
+
+**Symptômes** : Timeout lors du démarrage
+
+**Solutions** :
+```bash
+# Vérifier les logs
+docker-compose logs comfyui-worker
+
+# Vérifier que ComfyUI existe
+ls -la /workspace/ComfyUI  # ou /app/comfyui
+
+# Vérifier les modèles
+ls -la /workspace/ComfyUI/models/checkpoints/
+```
+
+#### 5. Network Volume non détecté
+
+**Symptômes** : Warning "No network volume found"
+
+**Solutions** :
+```bash
+# Vérifier que le volume est monté
+ls -la /runpod-volume
+
+# Vérifier les permissions
+chmod -R 755 /runpod-volume
+
+# Vérifier la configuration RunPod
+# Le volume doit être attaché à l'endpoint
+```
+
+### Logs de debug
+
+```bash
+# Logs en temps réel (local)
+docker-compose logs -f comfyui-worker
+
+# Logs du conteneur
+docker exec -it comfyui-serverless-worker tail -f /workspace/logs/comfyui-serverless.log
+
+# Logs RunPod
+# Disponibles dans le tableau de bord RunPod
+# Serverless → Votre endpoint → Logs
+```
 
 ## FAQ
 
