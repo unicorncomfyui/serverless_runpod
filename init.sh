@@ -12,55 +12,109 @@ rm -rf /tmp/torchinductor_* || true
 rm -rf /tmp/triton_cache_* || true
 echo "✓ Triton cache cleared"
 
-# Check if SageAttention is already installed
-if python -c "import sageattention" 2>/dev/null; then
-    echo "✓ SageAttention already installed, skipping build"
-else
-    echo "Building SageAttention from source..."
-    echo "This will take 2-3 minutes on first run..."
+# SageAttention installation with network volume caching
+# Cache is validated against commit hash to ensure correctness
+SAGE_CACHE_DIR="/workspace/sageattention_cache"
+SAGE_COMMIT="68de379"
+SAGE_COMMIT_FILE="$SAGE_CACHE_DIR/.commit_hash"
 
-    # Clone and build SageAttention with GPU-optimized compilation
+# Function to compile SageAttention from source
+compile_sageattention() {
+    echo "Building SageAttention from source (commit $SAGE_COMMIT)..."
+    echo "This will take 2-3 minutes..."
+
     cd /tmp
-
-    # Remove old clone if exists
     rm -rf SageAttention || true
 
-    # Clone specific commit for stability
     git clone https://github.com/thu-ml/SageAttention.git
     cd SageAttention
-    git reset --hard 68de379
+    git reset --hard $SAGE_COMMIT
 
     # Build with parallel compilation (matching comfyui-wan settings)
     export EXT_PARALLEL=4
     export NVCC_APPEND_FLAGS="--threads 8"
     export MAX_JOBS=32
 
-    echo "Compiling SageAttention (this may take a few minutes)..."
+    echo "Compiling SageAttention..."
     pip install -e . > /tmp/sage_build.log 2>&1
 
     if [ $? -eq 0 ]; then
-        echo "✓ SageAttention compilation completed"
-        # Clean up build artifacts
-        cd /
-        rm -rf /tmp/SageAttention
+        if python -c "import sageattention; print(f'SageAttention {sageattention.__version__} compiled')" 2>/dev/null; then
+            echo "✓ SageAttention compilation successful"
 
-        # Verify installation
-        if python -c "import sageattention; print(f'SageAttention version: {sageattention.__version__}')" 2>/dev/null; then
-            echo "✓ SageAttention verified and ready"
+            # Cache the build on network volume for future cold starts
+            echo "Caching compiled build to network volume..."
+            mkdir -p "$SAGE_CACHE_DIR"
+            rm -rf "$SAGE_CACHE_DIR/SageAttention" || true
+            cp -r /tmp/SageAttention "$SAGE_CACHE_DIR/SageAttention"
+            echo "$SAGE_COMMIT" > "$SAGE_COMMIT_FILE"
+            echo "✓ Build cached (future cold starts will be ~10s instead of 2-3min)"
+
+            cd /
+            rm -rf /tmp/SageAttention
+            return 0
         else
             echo "❌ CRITICAL: SageAttention built but not importable!"
-            echo "This should not happen. Check Python environment."
-            exit 1
+            cd /
+            rm -rf /tmp/SageAttention
+            return 1
         fi
     else
         echo "❌ CRITICAL: SageAttention build failed!"
         echo "Build log:"
         cat /tmp/sage_build.log
         echo ""
-        echo "This is required for t2v workflows. Exiting."
-        exit 1
+        cd /
+        rm -rf /tmp/SageAttention
+        return 1
+    fi
+}
+
+# Check if SageAttention is already installed in current container
+if python -c "import sageattention" 2>/dev/null; then
+    echo "✓ SageAttention already installed in container"
+else
+    # Check if we have a cached build
+    if [ -d "$SAGE_CACHE_DIR/SageAttention" ] && [ -f "$SAGE_COMMIT_FILE" ]; then
+        CACHED_COMMIT=$(cat "$SAGE_COMMIT_FILE")
+
+        if [ "$CACHED_COMMIT" = "$SAGE_COMMIT" ]; then
+            echo "Found cached SageAttention build (commit $SAGE_COMMIT)"
+            echo "Installing from cache (~10 seconds)..."
+
+            cd "$SAGE_CACHE_DIR/SageAttention"
+            pip install -e . > /tmp/sage_cache_install.log 2>&1
+
+            if python -c "import sageattention; print(f'SageAttention {sageattention.__version__} from cache')" 2>/dev/null; then
+                echo "✓ SageAttention restored from cache successfully"
+            else
+                echo "⚠️  Cached build failed to import, rebuilding from source..."
+                rm -rf "$SAGE_CACHE_DIR/SageAttention"
+                rm -f "$SAGE_COMMIT_FILE"
+                compile_sageattention || exit 1
+            fi
+        else
+            echo "⚠️  Cached build is outdated (cached: $CACHED_COMMIT, needed: $SAGE_COMMIT)"
+            echo "Removing old cache and rebuilding..."
+            rm -rf "$SAGE_CACHE_DIR/SageAttention"
+            rm -f "$SAGE_COMMIT_FILE"
+            compile_sageattention || exit 1
+        fi
+    else
+        # No cache, compile from source
+        echo "No cached build found, compiling from source..."
+        compile_sageattention || exit 1
     fi
 fi
+
+# Final verification before starting ComfyUI
+if ! python -c "import sageattention" 2>/dev/null; then
+    echo "❌ CRITICAL: SageAttention not available after installation!"
+    echo "Cannot start ComfyUI without SageAttention."
+    exit 1
+fi
+
+echo "✓ SageAttention ready"
 
 # Create text encoder cache directory
 mkdir -p /workspace/text_embed_cache
