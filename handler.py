@@ -18,6 +18,7 @@ BASE_URI = os.environ.get('COMFYUI_HOST', 'http://127.0.0.1:3000')
 TIMEOUT = int(os.environ.get('TIMEOUT_SECONDS', 600))
 DISK_MIN_FREE_BYTES = int(float(os.environ.get('MIN_FREE_DISK_GB', 0.5)) * 1024 * 1024 * 1024)
 MEMORY_MIN_FREE_BYTES = int(float(os.environ.get('MIN_FREE_MEMORY_GB', 1.0)) * 1024 * 1024 * 1024)
+ENABLE_AGGRESSIVE_CLEANUP = os.environ.get('ENABLE_AGGRESSIVE_CLEANUP', 'false').lower() == 'true'
 
 # Detect ComfyUI directory (same priority as start.sh)
 # IMPORTANT: Prioritize container ComfyUI (pinned version) over network volume
@@ -376,57 +377,42 @@ def get_output_files(history: Dict[str, Any]) -> Dict[str, List[str]]:
 
 
 def cleanup_models():
-    """Adaptive cleanup to balance performance and memory safety
+    """Lightweight cleanup - only clears CUDA cache without blocking operations
 
-    Strategy (3 levels):
-    1. Normal (memory > 2GB): free_memory only (keep models, clear cache/activations)
-    2. Low memory (< 2GB): unload small models (CLIP/VAE), keep UNET
-    3. Critical (< 1GB): full unload (emergency)
+    By default: minimal cleanup (CUDA cache only) - adds <1s overhead
+    With ENABLE_AGGRESSIVE_CLEANUP=true: full cleanup - adds 70-80s overhead
 
-    This keeps the heavy UNET (14B, slow to load) while clearing fast-loading parts.
+    ComfyUI already manages memory intelligently. Aggressive cleanup is only
+    needed if you experience OOM errors on consecutive generations.
     """
     try:
-        # Check current memory to decide cleanup strategy
-        memory_info = get_container_memory_info()
-        memory_available_gb = memory_info['available'] / (1024**3)
+        if ENABLE_AGGRESSIVE_CLEANUP:
+            # Aggressive cleanup: unload models via ComfyUI API (slow)
+            memory_info = get_container_memory_info()
+            memory_available_gb = memory_info['available'] / (1024**3)
 
-        # Adaptive cleanup based on memory pressure
-        if memory_available_gb >= 2.0:
-            # Normal: Clear activations/cache, keep all models
-            cleanup_params = {"free_memory": True, "unload_models": False}
-            cleanup_type = "SOFT"
-            logger.info(f"Cleanup: SOFT (free cache, keep models) - {memory_available_gb:.2f}GB available")
+            if memory_available_gb >= 2.0:
+                cleanup_params = {"free_memory": True, "unload_models": False}
+                logger.info(f"Cleanup: SOFT - {memory_available_gb:.2f}GB available")
+            elif memory_available_gb >= 1.0:
+                cleanup_params = {"free_memory": True, "unload_models": True}
+                logger.info(f"Cleanup: MEDIUM - {memory_available_gb:.2f}GB available")
+            else:
+                cleanup_params = {"free_memory": True, "unload_models": True}
+                logger.warning(f"Cleanup: HARD - {memory_available_gb:.2f}GB available")
 
-        elif memory_available_gb >= 1.0:
-            # Low memory: Free memory + unload small models
-            cleanup_params = {"free_memory": True, "unload_models": True}
-            cleanup_type = "MEDIUM"
-            logger.info(f"Cleanup: MEDIUM (unload small models) - {memory_available_gb:.2f}GB available")
+            response = requests.post(f"{BASE_URI}/free", json=cleanup_params, timeout=30)
+            response.raise_for_status()
+            logger.info("Aggressive cleanup completed")
 
-        else:
-            # Critical: Full cleanup
-            cleanup_params = {"free_memory": True, "unload_models": True}
-            cleanup_type = "HARD"
-            logger.warning(f"Cleanup: HARD (full unload) - CRITICAL MEMORY: {memory_available_gb:.2f}GB")
-
-        # Execute cleanup via ComfyUI API
-        response = requests.post(f"{BASE_URI}/free", json=cleanup_params, timeout=30)
-        response.raise_for_status()
-
-        # Also clear CUDA cache to release fragmented memory
-        try:
-            import torch
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
-                torch.cuda.synchronize()
-                logger.info("CUDA cache cleared")
-        except Exception as cuda_err:
-            logger.warning(f"Could not clear CUDA cache: {cuda_err}")
-
-        logger.info(f"Cleanup completed: {cleanup_type}")
+        # Always do lightweight CUDA cache clear (fast, async)
+        import torch
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+            logger.debug("CUDA cache cleared")
 
     except Exception as e:
-        logger.warning(f"Error during cleanup: {e}")
+        logger.debug(f"Cleanup error: {e}")
 
 
 def handler(event: Dict[str, Any]) -> Dict[str, Any]:
